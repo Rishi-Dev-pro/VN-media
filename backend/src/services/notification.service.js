@@ -68,6 +68,14 @@ class NotificationService {
         metadata,
       });
 
+      // Attempt real-time delivery to connected recipient (Persistence-First)
+      try {
+        const { deliverNotification } = require('../realtime/notification.gateway');
+        deliverNotification(notification);
+      } catch (rtErr) {
+        console.error('[Realtime Delivery Error]', rtErr);
+      }
+
       return notification;
     } catch (err) {
       if (err.code === 11000) {
