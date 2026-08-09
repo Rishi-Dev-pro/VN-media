@@ -43,6 +43,16 @@ class LikeService {
         userId: user._id,
         voiceNoteId,
       });
+
+      // Record VOICE_NOTE_LIKED activity event ONLY on new Like creation
+      const activityEventService = require('./activityEvent.service');
+      const { EVENT_TYPES, TARGET_TYPES } = require('../utils/activityEvents');
+      await activityEventService.createActivityEvent({
+        actorId: user._id,
+        type: EVENT_TYPES.VOICE_NOTE_LIKED,
+        targetType: TARGET_TYPES.VOICE_NOTE,
+        targetId: voiceNoteId,
+      });
     } catch (err) {
       if (err.code === 11000) {
         // Handle concurrent duplicate key race condition gracefully

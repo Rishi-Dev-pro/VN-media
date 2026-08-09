@@ -4,6 +4,7 @@ const authRoutes = require('./auth.routes');
 const userRoutes = require('./user.routes');
 const voiceNoteRoutes = require('./voiceNote.routes');
 const albumRoutes = require('./album.routes');
+const activityEventRoutes = require('./activityEvent.routes');
 
 const router = express.Router();
 
@@ -13,5 +14,6 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/vns', voiceNoteRoutes);
 router.use('/albums', albumRoutes);
+router.use('/activity', activityEventRoutes);
 
 module.exports = router;

@@ -69,6 +69,16 @@ class AlbumService {
       coverImage: coverImage ? coverImage.trim() : null,
     });
 
+    // Record ALBUM_CREATED activity event
+    const activityEventService = require('./activityEvent.service');
+    const { EVENT_TYPES, TARGET_TYPES } = require('../utils/activityEvents');
+    await activityEventService.createActivityEvent({
+      actorId: user._id,
+      type: EVENT_TYPES.ALBUM_CREATED,
+      targetType: TARGET_TYPES.ALBUM,
+      targetId: album._id,
+    });
+
     return album;
   }
 

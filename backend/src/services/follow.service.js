@@ -56,9 +56,19 @@ class FollowService {
         followerId,
         followingId: targetUser._id,
       });
+
+      // Record USER_FOLLOWED activity event ONLY on successful new follow creation
+      const activityEventService = require('./activityEvent.service');
+      const { EVENT_TYPES, TARGET_TYPES } = require('../utils/activityEvents');
+      await activityEventService.createActivityEvent({
+        actorId: followerId,
+        type: EVENT_TYPES.USER_FOLLOWED,
+        targetType: TARGET_TYPES.USER,
+        targetId: targetUser._id,
+      });
     } catch (err) {
       if (err.code === 11000) {
-        // Idempotent duplicate follow handling
+        // Idempotent duplicate follow handling - no duplicate event created
       } else {
         throw err;
       }
