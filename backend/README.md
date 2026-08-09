@@ -66,6 +66,9 @@ This repository contains the backend REST API foundation, database models, and a
 
    # Run Phase 6 Search, Tags & Discovery Tests
    node tests/testPhase6Search.js
+
+   # Run Phase 7 User Profiles & Public Creator Pages Tests
+   node tests/testPhase7Profiles.js
    ```
 
 ---
@@ -98,14 +101,14 @@ npm start
 
 ---
 
-## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5 & Phase 6)
+## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5, Phase 6 & Phase 7)
 
 The Voice Note storage and streaming foundation utilizes a decoupled **Storage Service Abstraction** pattern:
 
 ```text
-Voice Note Controller / Album Controller / Like Controller
+User Controller / Voice Note Controller / Album Controller / Like Controller
         ↓
-   VoiceNote Service (Centralized Auth, Search, Tag Normalization & Storage Stream orchestration)
+   User Service / VoiceNote Service (Centralized Auth, Public Profiles & Stream orchestration)
         ↓
    Storage Service (Decoupled abstraction layer)
         ↓
@@ -115,10 +118,13 @@ Voice Note Controller / Album Controller / Like Controller
 ### Access & Discovery Authorization Matrix (Single Source of Truth)
 
 > [!IMPORTANT]
-> **Privacy Invariant**: Search and discovery (`GET /feed`, `GET /search`, `GET /tags/:tag`) only discover public VoiceNotes (`visibility = 'public'`). Private VoiceNotes NEVER appear in search results, total counts, pagination, or tag discovery queries.
+> **Privacy Invariant**: Public profiles (`GET /api/users/:username`) and public creator listings (`GET /api/users/:username/voice-notes`) only expose safe public metadata (`id`, `username`, `avatar`, `bio`, `createdAt`, `publicVoiceNotes` count). `email` and `passwordHash` are **NEVER** exposed. Private VoiceNotes and private Albums NEVER appear in public creator profiles or listings.
 
 | Endpoint Request | VoiceNote Visibility | Requester Role | Result | HTTP Status |
 | :--- | :--- | :--- | :--- | :--- |
+| `GET /api/users/:username` | Any | Anyone (Guest / User / Owner) | ALLOW (Public user profile & stats) | `200 OK` |
+| `GET /api/users/:username/voice-notes` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
+| `GET /api/users/:username/voice-notes` | `private` | Anyone | DENIED (Excluded from creator listing) | N/A |
 | `GET /api/vns/feed` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
 | `GET /api/vns/feed` | `private` | Anyone | DENIED (Excluded from feed) | N/A |
 | `GET /api/vns/search` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
@@ -151,9 +157,11 @@ Authorization: Bearer <token>
 - **`POST /api/auth/register`**: Register a new user account.
 - **`POST /api/auth/login`**: Authenticate credentials and receive a JWT.
 
-### 3. User Management (Protected)
-- **`GET /api/users/me`**: Get current authenticated user profile.
-- **`PATCH /api/users/me`**: Update current authenticated user profile (`username`, `avatar`, `bio`).
+### 3. User Management & Public Profiles (Phase 2 & Phase 7)
+- **`GET /api/users/me`**: Get current authenticated user profile (includes `email`). Auth required.
+- **`PATCH /api/users/me`**: Update current authenticated user profile (`username`, `avatar`, `bio`). Username changes preserve immutable `_id` relationships. Auth required.
+- **`GET /api/users/:username`**: Retrieve public user profile metadata and statistics (`stats: { publicVoiceNotes }`). Strips `email` and `passwordHash`. Public / Unauthenticated.
+- **`GET /api/users/:username/voice-notes`**: Retrieve paginated list of public VoiceNotes owned by creator (`?page=1&limit=20`). Strictly excludes private VoiceNotes. Public / Unauthenticated.
 
 ### 4. Voice Note Management & Discovery (Phase 3, Phase 4 & Phase 6)
 - **`GET /api/vns/feed`**: Retrieve public discovery feed (`visibility = 'public'`). Optional auth.
@@ -173,6 +181,9 @@ Authorization: Bearer <token>
 - **`GET /api/vns/:id/likes`**: Get aggregate Like count and `likedByMe` status. Optional auth.
 
 ### 6. Albums & Album Items (Phase 5 - Private Collections)
+> [!IMPORTANT]
+> **Albums are private owner-managed collections.** Public albums and album sharing are intentionally not implemented yet.
+
 - **`POST /api/albums`**: Create a new Album (`title`, `description`, `coverImage`). Auth required.
 - **`GET /api/albums`**: Retrieve paginated list of Albums owned by current user. Auth required.
 - **`GET /api/albums/:id`**: Retrieve single Album owned by user with items sorted by `position ASC`. Auth required.
@@ -184,7 +195,7 @@ Authorization: Bearer <token>
 
 ---
 
-## Data Models (Phase 1 & Phase 6)
+## Data Models (Phase 1, Phase 6 & Phase 7)
 
 - **`User`** (`src/models/User.js`): Accounts (`username`, `email`, `passwordHash`, `avatar`, `bio`, `timestamps`).
 - **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `tags`, `audioUrl`, `duration`, `visibility`, `timestamps`).
@@ -194,14 +205,14 @@ Authorization: Bearer <token>
 
 ---
 
-## Current Status & Phase 6 Scope
+## Current Status & Phase 7 Scope
 
 > [!NOTE]
-> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5 & Phase 6 Status: COMPLETE.**
-> Deterministic search, tag normalization, tag discovery, owner-only metadata updates, strict database-level privacy isolation, and regression safety are fully implemented and verified via 35 automated tests (170 total test cases across all phases).
+> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6 & Phase 7 Status: COMPLETE.**
+> Public user profiles, public creator VoiceNote listings, credential privacy, username change relationship preservation, index optimization, and regression safety are fully implemented and verified via 42 automated tests (212 total test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
-- ❌ Social follower network & following feeds
+- ❌ Followers, following, and follow/unfollow actions
 - ❌ Public albums and album sharing
 - ❌ User activity feeds
 - ❌ Comments & notifications
@@ -212,7 +223,8 @@ Authorization: Bearer <token>
 
 ## Future Roadmap
 
-1. **Phase 7 — Social Network & User Feeds:** Follower interactions, following feeds, user activity feeds, and social notifications.
+1. **Phase 8 — Social Network & User Feeds:** Follower interactions, following feeds, user activity feeds, and social notifications.
+
 
 
 

@@ -1,16 +1,20 @@
 const express = require('express');
 const { protect } = require('../middleware/auth');
-const { getMe, updateMe } = require('../controllers/user.controller');
+const {
+  getMe,
+  updateMe,
+  getPublicProfile,
+  getPublicUserVoiceNotes,
+} = require('../controllers/user.controller');
 
 const router = express.Router();
 
-// All user routes require JWT authentication
-router.use(protect);
+// Authenticated user profile routes (Requires JWT)
+router.get('/me', protect, getMe);
+router.patch('/me', protect, updateMe);
 
-// GET /api/users/me
-router.get('/me', getMe);
-
-// PATCH /api/users/me
-router.patch('/me', updateMe);
+// Public creator profile & voice notes routes (Unauthenticated / Public)
+router.get('/:username', getPublicProfile);
+router.get('/:username/voice-notes', getPublicUserVoiceNotes);
 
 module.exports = router;

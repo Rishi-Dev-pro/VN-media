@@ -60,6 +60,9 @@ voiceNoteSchema.index({ visibility: 1, createdAt: -1 });
 // Multikey compound index for public tag discovery queries
 voiceNoteSchema.index({ visibility: 1, tags: 1, createdAt: -1 });
 
+// Compound index for public creator VoiceNote listing queries
+voiceNoteSchema.index({ ownerId: 1, visibility: 1, createdAt: -1 });
+
 const VoiceNote = mongoose.model('VoiceNote', voiceNoteSchema);
 
 module.exports = VoiceNote;

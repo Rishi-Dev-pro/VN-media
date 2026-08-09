@@ -280,6 +280,7 @@ const deleteVoiceNote = async (req, res, next) => {
 };
 
 module.exports = {
+  formatVoiceNote,
   uploadVoiceNote,
   updateVoiceNote,
   searchVoiceNotes,

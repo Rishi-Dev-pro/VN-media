@@ -1,7 +1,115 @@
 const User = require('../models/User');
+const VoiceNote = require('../models/VoiceNote');
 const { sanitizeUser } = require('./auth.service');
 
+/**
+ * Format a User document into a safe public profile JSON object.
+ * Strictly excludes email and passwordHash.
+ *
+ * @param {object} user - Mongoose User document
+ * @returns {object} Safe public user profile representation
+ */
+const sanitizePublicUser = (user) => {
+  if (!user) return null;
+  return {
+    id: user._id.toString(),
+    username: user.username,
+    avatar: user.avatar || null,
+    bio: user.bio || '',
+    createdAt: user.createdAt,
+  };
+};
+
 class UserService {
+  /**
+   * Get public profile representation and statistics of a user by username.
+   *
+   * @param {string} username - Target username
+   * @returns {Promise<{ user: object, stats: { publicVoiceNotes: number } }>}
+   */
+  static async getPublicProfileByUsername(username) {
+    if (!username || typeof username !== 'string' || !username.trim()) {
+      const err = new Error('Username parameter is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const escapedUsername = username.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const user = await User.findOne({ username: new RegExp(`^${escapedUsername}$`, 'i') });
+
+    if (!user) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // Privacy Invariant: Count ONLY public VoiceNotes owned by this user
+    const publicVoiceNotes = await VoiceNote.countDocuments({
+      ownerId: user._id,
+      visibility: 'public',
+    });
+
+    return {
+      user: sanitizePublicUser(user),
+      stats: {
+        publicVoiceNotes,
+      },
+    };
+  }
+
+  /**
+   * Get paginated public VoiceNotes owned by a creator by username.
+   *
+   * @param {object} params
+   * @param {string} params.username - Target creator's username
+   * @param {number} [params.page=1]
+   * @param {number} [params.limit=20]
+   */
+  static async getPublicUserVoiceNotes({ username, page = 1, limit = 20 }) {
+    if (!username || typeof username !== 'string' || !username.trim()) {
+      const err = new Error('Username parameter is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const escapedUsername = username.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const user = await User.findOne({ username: new RegExp(`^${escapedUsername}$`, 'i') });
+
+    if (!user) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    // Privacy Invariant: Query ONLY public VoiceNotes owned by this user
+    const query = { ownerId: user._id, visibility: 'public' };
+
+    const [voiceNotes, total] = await Promise.all([
+      VoiceNote.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .populate('ownerId', 'username'),
+      VoiceNote.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / parsedLimit) || 0;
+
+    return {
+      voiceNotes,
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
   /**
    * Get public profile representation of a user by ID.
    */
@@ -76,4 +184,7 @@ class UserService {
   }
 }
 
-module.exports = UserService;
+module.exports = {
+  UserService,
+  sanitizePublicUser,
+};
