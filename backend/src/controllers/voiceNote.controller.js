@@ -82,6 +82,26 @@ const updateVoiceNote = async (req, res, next) => {
 };
 
 /**
+ * Replace audio file of an existing VoiceNote owned by authenticated user.
+ * PATCH /api/vns/:id/audio
+ */
+const replaceVoiceNoteAudio = async (req, res, next) => {
+  try {
+    const voiceNote = await voiceNoteService.replaceVoiceNoteAudio({
+      voiceNoteId: req.params.id,
+      user: req.user,
+      file: req.file,
+    });
+
+    return sendSuccess(res, 'Voice note audio replaced successfully', {
+      voiceNote: formatVoiceNote(voiceNote),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Search public VoiceNotes by title, description, or tags.
  * GET /api/vns/search
  */
@@ -304,6 +324,7 @@ module.exports = {
   formatVoiceNote,
   uploadVoiceNote,
   updateVoiceNote,
+  replaceVoiceNoteAudio,
   searchVoiceNotes,
   getVoiceNotesByTag,
   getPublicFeed,

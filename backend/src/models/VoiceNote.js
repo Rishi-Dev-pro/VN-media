@@ -45,6 +45,11 @@ const voiceNoteSchema = new mongoose.Schema(
       default: [],
       index: true,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -52,16 +57,16 @@ const voiceNoteSchema = new mongoose.Schema(
 );
 
 // Compound index for efficient owner timeline queries
-voiceNoteSchema.index({ ownerId: 1, createdAt: -1 });
+voiceNoteSchema.index({ ownerId: 1, deletedAt: 1, createdAt: -1 });
 
 // Index for chronological public feeds
-voiceNoteSchema.index({ visibility: 1, createdAt: -1 });
+voiceNoteSchema.index({ visibility: 1, deletedAt: 1, createdAt: -1 });
 
 // Multikey compound index for public tag discovery queries
-voiceNoteSchema.index({ visibility: 1, tags: 1, createdAt: -1 });
+voiceNoteSchema.index({ visibility: 1, tags: 1, deletedAt: 1, createdAt: -1 });
 
 // Compound index for public creator VoiceNote listing queries
-voiceNoteSchema.index({ ownerId: 1, visibility: 1, createdAt: -1 });
+voiceNoteSchema.index({ ownerId: 1, visibility: 1, deletedAt: 1, createdAt: -1 });
 
 const VoiceNote = mongoose.model('VoiceNote', voiceNoteSchema);
 

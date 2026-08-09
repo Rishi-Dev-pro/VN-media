@@ -136,7 +136,7 @@ class AlbumService {
       });
 
     const items = rawItems
-      .filter((item) => item.voiceNoteId)
+      .filter((item) => item.voiceNoteId && !item.voiceNoteId.deletedAt)
       .map((item) => ({
         id: item._id.toString(),
         position: item.position,
@@ -243,7 +243,7 @@ class AlbumService {
     }
 
     const voiceNote = await VoiceNote.findById(voiceNoteId);
-    if (!voiceNote) {
+    if (!voiceNote || voiceNote.deletedAt) {
       const err = new Error('Voice note not found');
       err.statusCode = 404;
       throw err;

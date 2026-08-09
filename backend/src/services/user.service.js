@@ -46,9 +46,9 @@ class UserService {
 
     const Follow = require('../models/Follow');
 
-    // Privacy Invariant: Count ONLY public VoiceNotes, plus followers and following counts
+    // Privacy Invariant: Count ONLY active public VoiceNotes, plus followers and following counts
     const [publicVoiceNotes, followersCount, followingCount] = await Promise.all([
-      VoiceNote.countDocuments({ ownerId: user._id, visibility: 'public' }),
+      VoiceNote.countDocuments({ ownerId: user._id, visibility: 'public', deletedAt: null }),
       Follow.countDocuments({ followingId: user._id }),
       Follow.countDocuments({ followerId: user._id }),
     ]);
@@ -105,8 +105,8 @@ class UserService {
     const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const skip = (parsedPage - 1) * parsedLimit;
 
-    // Privacy Invariant: Query ONLY public VoiceNotes owned by this user
-    const query = { ownerId: user._id, visibility: 'public' };
+    // Privacy Invariant: Query ONLY active public VoiceNotes owned by this user
+    const query = { ownerId: user._id, visibility: 'public', deletedAt: null };
 
     const [voiceNotes, total] = await Promise.all([
       VoiceNote.find(query)

@@ -21,8 +21,9 @@ router.post('/', protect, uploadSingleAudio, voiceNoteController.uploadVoiceNote
 // Mount Like endpoints under /:id (e.g. /:id/like, /:id/likes)
 router.use('/:id', likeRoutes);
 
-// Single VoiceNote access, metadata update, streaming, and downloads
+// Single VoiceNote access, metadata update, audio replacement, streaming, and downloads
 router.get('/:id', protectOptional, voiceNoteController.getVoiceNoteById);
+router.patch('/:id/audio', protect, uploadSingleAudio, voiceNoteController.replaceVoiceNoteAudio);
 router.patch('/:id', protect, voiceNoteController.updateVoiceNote);
 router.get('/:id/stream', protectOptional, voiceNoteController.streamVoiceNote);
 router.get('/:id/download', protectOptional, voiceNoteController.downloadVoiceNote);

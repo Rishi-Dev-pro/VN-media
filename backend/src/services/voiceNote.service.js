@@ -27,6 +27,14 @@ class VoiceNoteService {
    * @returns {{ allowed: boolean, statusCode?: number, message?: string }}
    */
   canAccessVoiceNote(user, voiceNote) {
+    if (voiceNote.deletedAt) {
+      return {
+        allowed: false,
+        statusCode: 404,
+        message: 'Voice note not found',
+      };
+    }
+
     if (voiceNote.visibility === 'public') {
       return { allowed: true };
     }
@@ -222,7 +230,7 @@ class VoiceNoteService {
     }
 
     const voiceNote = await VoiceNote.findById(voiceNoteId);
-    if (!voiceNote) {
+    if (!voiceNote || voiceNote.deletedAt) {
       const err = new Error('Voice note not found');
       err.statusCode = 404;
       throw err;
@@ -296,6 +304,73 @@ class VoiceNoteService {
   }
 
   /**
+   * Replace audio file of an existing VoiceNote owned by authenticated user.
+   * Failure-safe sequence: Validate & Save new file -> Update DB -> Clean up old file.
+   */
+  async replaceVoiceNoteAudio({ voiceNoteId, user, file }) {
+    if (!user || !user._id) {
+      const err = new Error('Authentication required');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    if (!file || !file.buffer) {
+      const err = new Error('Audio file is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const voiceNote = await VoiceNote.findById(voiceNoteId);
+    if (!voiceNote || voiceNote.deletedAt) {
+      const err = new Error('Voice note not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const ownerIdStr = voiceNote.ownerId && voiceNote.ownerId._id
+      ? voiceNote.ownerId._id.toString()
+      : voiceNote.ownerId
+      ? voiceNote.ownerId.toString()
+      : '';
+
+    if (ownerIdStr !== user._id.toString()) {
+      const err = new Error('Access denied: You do not have permission to replace audio for this voice note');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    // 1. Validate new audio format, magic bytes, and extract metadata
+    const { extension, duration } = await audioService.validateAndExtractMetadata(
+      file.buffer,
+      file.originalname,
+      file.mimetype
+    );
+
+    // 2. Save new file to storage
+    const { storageRef: newStorageRef } = await storageService.saveFile(file.buffer, extension);
+
+    // 3. Atomically update DB record; if DB update fails, remove new file and keep old audio untouched
+    const oldStorageRef = voiceNote.audioUrl;
+
+    try {
+      voiceNote.audioUrl = newStorageRef;
+      voiceNote.duration = duration;
+      await voiceNote.save();
+
+      // Clean up old audio file ONLY after DB update succeeds
+      if (oldStorageRef && oldStorageRef !== newStorageRef) {
+        await storageService.deleteFile(oldStorageRef);
+      }
+
+      return voiceNote;
+    } catch (dbError) {
+      // DB update failed: delete newly stored audio file so old audio file remains active and intact
+      await storageService.deleteFile(newStorageRef);
+      throw dbError;
+    }
+  }
+
+  /**
    * Search public VoiceNotes across title, description, and tags.
    * MANDATORY: Strictly queries visibility = 'public'.
    */
@@ -304,7 +379,7 @@ class VoiceNoteService {
     const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const skip = (parsedPage - 1) * parsedLimit;
 
-    const query = { visibility: 'public' };
+    const query = { visibility: 'public', deletedAt: null };
 
     if (q && typeof q === 'string' && q.trim()) {
       const trimmedQ = q.trim();
@@ -362,7 +437,7 @@ class VoiceNoteService {
     const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const skip = (parsedPage - 1) * parsedLimit;
 
-    const query = { visibility: 'public', tags: normalizedTag };
+    const query = { visibility: 'public', tags: normalizedTag, deletedAt: null };
 
     const [voiceNotes, total] = await Promise.all([
       VoiceNote.find(query)
@@ -395,13 +470,15 @@ class VoiceNoteService {
     const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const skip = (parsedPage - 1) * parsedLimit;
 
+    const query = { visibility: 'public', deletedAt: null };
+
     const [voiceNotes, total] = await Promise.all([
-      VoiceNote.find({ visibility: 'public' })
+      VoiceNote.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parsedLimit)
         .populate('ownerId', 'username'),
-      VoiceNote.countDocuments({ visibility: 'public' }),
+      VoiceNote.countDocuments(query),
     ]);
 
     const totalPages = Math.ceil(total / parsedLimit) || 1;
@@ -451,7 +528,7 @@ class VoiceNoteService {
     }
 
     // 2. Query public VoiceNotes created by followed users
-    const query = { ownerId: { $in: followedUserIds }, visibility: 'public' };
+    const query = { ownerId: { $in: followedUserIds }, visibility: 'public', deletedAt: null };
 
     const [voiceNotes, total] = await Promise.all([
       VoiceNote.find(query)
@@ -483,12 +560,14 @@ class VoiceNoteService {
     const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const skip = (parsedPage - 1) * parsedLimit;
 
+    const query = { ownerId: userId, deletedAt: null };
+
     const [voiceNotes, total] = await Promise.all([
-      VoiceNote.find({ ownerId: userId })
+      VoiceNote.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parsedLimit),
-      VoiceNote.countDocuments({ ownerId: userId }),
+      VoiceNote.countDocuments(query),
     ]);
 
     const totalPages = Math.ceil(total / parsedLimit) || 1;
@@ -510,7 +589,7 @@ class VoiceNoteService {
   async getVoiceNoteById({ voiceNoteId, user }) {
     const voiceNote = await VoiceNote.findById(voiceNoteId).populate('ownerId', 'username');
 
-    if (!voiceNote) {
+    if (!voiceNote || voiceNote.deletedAt) {
       const err = new Error('Voice note not found');
       err.statusCode = 404;
       throw err;
@@ -532,7 +611,7 @@ class VoiceNoteService {
   async getVoiceNoteStreamInfo({ voiceNoteId, user }) {
     const voiceNote = await VoiceNote.findById(voiceNoteId);
 
-    if (!voiceNote) {
+    if (!voiceNote || voiceNote.deletedAt) {
       const err = new Error('Voice note not found');
       err.statusCode = 404;
       throw err;
@@ -586,12 +665,12 @@ class VoiceNoteService {
   }
 
   /**
-   * Delete a VoiceNote owned by authenticated user and its stored file.
+   * Soft-delete a VoiceNote owned by authenticated user.
    */
   async deleteVoiceNote({ voiceNoteId, userId }) {
     const voiceNote = await VoiceNote.findById(voiceNoteId);
 
-    if (!voiceNote) {
+    if (!voiceNote || voiceNote.deletedAt) {
       const err = new Error('Voice note not found');
       err.statusCode = 404;
       throw err;
@@ -609,11 +688,9 @@ class VoiceNoteService {
       throw err;
     }
 
-    // 1. Delete stored audio file
-    await storageService.deleteFile(voiceNote.audioUrl);
-
-    // 2. Delete database record
-    await VoiceNote.findByIdAndDelete(voiceNoteId);
+    // Soft-delete by setting deletedAt timestamp
+    voiceNote.deletedAt = new Date();
+    await voiceNote.save();
 
     return true;
   }
