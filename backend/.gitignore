@@ -18,3 +18,7 @@ yarn-error.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Storage / Uploaded files
+storage/audio/*
+!storage/audio/.gitkeep
