@@ -45,10 +45,12 @@ class UserService {
     }
 
     const Follow = require('../models/Follow');
+    const Album = require('../models/Album');
 
-    // Privacy Invariant: Count ONLY active public VoiceNotes, plus followers and following counts
-    const [publicVoiceNotes, followersCount, followingCount] = await Promise.all([
+    // Privacy Invariant: Count ONLY active public VoiceNotes, public Albums, plus followers and following counts
+    const [publicVoiceNotes, publicAlbums, followersCount, followingCount] = await Promise.all([
       VoiceNote.countDocuments({ ownerId: user._id, visibility: 'public', deletedAt: null }),
+      Album.countDocuments({ ownerId: user._id, visibility: 'public' }),
       Follow.countDocuments({ followingId: user._id }),
       Follow.countDocuments({ followerId: user._id }),
     ]);
@@ -57,6 +59,7 @@ class UserService {
       user: sanitizePublicUser(user),
       stats: {
         publicVoiceNotes,
+        publicAlbums,
         followers: followersCount,
         following: followingCount,
       },

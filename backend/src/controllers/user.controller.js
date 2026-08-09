@@ -64,9 +64,34 @@ const getPublicUserVoiceNotes = async (req, res, next) => {
   }
 };
 
+/**
+ * Controller retrieving a creator's public Albums by username.
+ * GET /api/users/:username/albums
+ */
+const getPublicUserAlbums = async (req, res, next) => {
+  try {
+    const albumService = require('../services/album.service');
+    const { formatAlbum } = require('./album.controller');
+
+    const { albums, pagination } = await albumService.getPublicUserAlbums({
+      username: req.params.username,
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+
+    return sendSuccess(res, 'Public creator albums retrieved successfully', {
+      albums: albums.map(formatAlbum),
+      pagination,
+    }, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getMe,
   updateMe,
   getPublicProfile,
   getPublicUserVoiceNotes,
+  getPublicUserAlbums,
 };

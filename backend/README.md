@@ -90,6 +90,9 @@ This repository contains the backend REST API foundation, database models, and a
 
    # Run Phase 14 Voice Note Lifecycle & Storage Integrity Tests
    node tests/testPhase14VoiceNoteLifecycle.js
+
+   # Run Phase 15 Public Albums & Album Discovery Tests
+   node tests/testPhase15PublicAlbums.js
    ```
 
 ---
@@ -122,9 +125,9 @@ npm start
 
 ---
 
-## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5, Phase 6, Phase 7, Phase 8, Phase 9, Phase 10, Phase 11, Phase 12, Phase 13 & Phase 14)
+## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5, Phase 6, Phase 7, Phase 8, Phase 9, Phase 10, Phase 11, Phase 12, Phase 13, Phase 14 & Phase 15)
 
-The Voice Note storage and streaming foundation utilizes a decoupled **Storage Service Abstraction** and **Real-Time Gateway** pattern with a soft-deletion lifecycle:
+The Voice Note storage and streaming foundation utilizes a decoupled **Storage Service Abstraction**, **Real-Time Gateway**, and **Public/Private Album Visibility System**:
 
 ```text
 User Controller / Follow Controller / Voice Note Controller / Album Controller / Like Controller / Activity Controller / Notification Controller
@@ -139,18 +142,18 @@ User Controller / Follow Controller / Voice Note Controller / Album Controller /
 ### Access & Discovery Authorization Matrix (Single Source of Truth)
 
 > [!IMPORTANT]
-> **Privacy & Lifecycle Invariant**: Soft-deleted VoiceNotes (`deletedAt != null`) are strictly isolated and excluded from public feed, search, tag discovery, creator profiles, following feed, albums, stream/download endpoints, and profile statistics. Audio replacement (`PATCH /api/vns/:id/audio`) uses a failure-safe sequence: validate new audio -> save to disk -> update DB -> delete old file on disk.
+> **Privacy & Lifecycle Invariant**: Soft-deleted VoiceNotes (`deletedAt != null`) are strictly isolated. Public Albums (`visibility = 'public'`) are publicly viewable and discoverable via `/api/albums/discover`, `/api/albums/search`, and `/api/users/:username/albums`. A Public Album exposes ONLY active public VoiceNotes (`visibility = 'public'` AND `deletedAt = null`). Private VoiceNotes inside public Albums remain hidden from non-owners.
 
 | Endpoint Request / Socket Event | Target Visibility | Requester Role | Result | HTTP Status / Event |
 | :--- | :--- | :--- | :--- | :--- |
+| `GET /api/albums/discover` | Public | Public / Optional Auth | ALLOW (Paginated discovery feed of public albums with publicItemCount) | `200 OK` |
+| `GET /api/albums/search` | Public | Public / Optional Auth | ALLOW (Search public albums by title and description) | `200 OK` |
+| `GET /api/users/:username/albums` | Public | Public / Optional Auth | ALLOW (Paginated public albums owned by creator) | `200 OK` |
+| `GET /api/albums/:id` | Public | Public / Optional Auth | ALLOW (View public album metadata and active public items) | `200 OK` |
+| `GET /api/albums/:id` | Private | Non-Owner / Guest | REJECT (Returns `404 Not Found` to protect private album existence) | `404 Not Found` |
+| `PATCH /api/albums/:id` | Any | Owner Only | ALLOW (Update title, description, coverImage, visibility) | `200 OK` |
 | `DELETE /api/vns/:id` | Active | Owner Only | ALLOW (Soft-deletes VoiceNote by setting `deletedAt = timestamp`) | `200 OK` |
 | `PATCH /api/vns/:id/audio` | Active | Owner Only | ALLOW (Failure-safe audio replacement & old file cleanup) | `200 OK` |
-| `PATCH /api/vns/:id` | Active | Owner Only | ALLOW (Update title, description, visibility, tags) | `200 OK` |
-| `GET /api/vns/:id/stream` | Active | Authorized | ALLOW (Stream audio; returns `404` if soft-deleted) | `200 OK` / `404` |
-| `GET /api/vns/:id/download` | Active | Authorized | ALLOW (Download audio; returns `404` if soft-deleted) | `200 OK` / `404` |
-| `GET /api/notifications/preferences` | Any | Authenticated User | ALLOW (Retrieve user's notification preferences) | `200 OK` |
-| `PATCH /api/notifications/preferences` | Any | Authenticated User | ALLOW (Update partial boolean notification preferences) | `200 OK` |
-| `GET /api/notifications` | Any | Authenticated User | ALLOW (Paginated notifications for recipient with unreadCount) | `200 OK` |
 
 ---
 
@@ -172,11 +175,12 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 - **`POST /api/auth/register`**: Register a new user account.
 - **`POST /api/auth/login`**: Authenticate credentials and receive a JWT.
 
-### 3. User Management & Public Profiles (Phase 2 & Phase 7)
+### 3. User Management & Public Profiles (Phase 2, Phase 7 & Phase 15)
 - **`GET /api/users/me`**: Get current authenticated user profile (includes `email`). Auth required.
 - **`PATCH /api/users/me`**: Update current authenticated user profile (`username`, `avatar`, `bio`). Username changes preserve immutable `_id` relationships. Auth required.
-- **`GET /api/users/:username`**: Retrieve public user profile metadata and statistics (`stats: { publicVoiceNotes, followers, following }`). Strips `email` and `passwordHash`. Excludes deleted VoiceNotes from `publicVoiceNotes` count. Public / Unauthenticated.
-- **`GET /api/users/:username/voice-notes`**: Retrieve paginated list of active public VoiceNotes owned by creator (`?page=1&limit=20`). Strictly excludes private and soft-deleted VoiceNotes. Public / Unauthenticated.
+- **`GET /api/users/:username`**: Retrieve public user profile metadata and statistics (`stats: { publicVoiceNotes, publicAlbums, followers, following }`). Strips `email` and `passwordHash`. Public / Unauthenticated.
+- **`GET /api/users/:username/voice-notes`**: Retrieve paginated list of active public VoiceNotes owned by creator (`?page=1&limit=20`). Public / Unauthenticated.
+- **`GET /api/users/:username/albums`**: Retrieve paginated list of public Albums owned by creator (`?page=1&limit=20`). Strictly excludes private Albums. Public / Unauthenticated.
 
 ### 4. Followers & Following Social Graph (Phase 8)
 - **`POST /api/users/:id/follow`**: Follow a user. Idempotent (`{ following: true }`). Rejects self-follow (`400 Bad Request`). Auth required.
@@ -187,8 +191,8 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 
 ### 5. Voice Note Management, Discovery & Lifecycle (Phase 3, Phase 4, Phase 6, Phase 9 & Phase 14)
 - **`GET /api/vns/feed`**: Retrieve global public discovery feed (`visibility = 'public'`, `deletedAt = null`). Optional auth.
-- **`GET /api/vns/feed/following`**: Retrieve personalized feed of active public VoiceNotes from followed creators (`?page=1&limit=20`). Strictly excludes private and soft-deleted VoiceNotes. Auth required.
-- **`GET /api/vns/search`**: Search active public VoiceNotes across `title`, `description`, and `tags` (`?page=1&limit=20`). Excludes soft-deleted VoiceNotes. Optional auth.
+- **`GET /api/vns/feed/following`**: Retrieve personalized feed of active public VoiceNotes from followed creators (`?page=1&limit=20`). Auth required.
+- **`GET /api/vns/search`**: Search active public VoiceNotes across `title`, `description`, and `tags` (`?page=1&limit=20`). Optional auth.
 - **`GET /api/vns/tags/:tag`**: Retrieve active public VoiceNotes matching a normalized tag (`?page=1&limit=20`). Optional auth.
 - **`POST /api/vns`**: Upload an audio file and create a VoiceNote (`audio`, `title`, `description`, `visibility`, `tags`). Auth required.
 - **`PATCH /api/vns/:id`**: Update VoiceNote metadata (`title`, `description`, `visibility`, `tags`). Owner only. Auth required.
@@ -200,58 +204,61 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 - **`DELETE /api/vns/:id`**: Soft-delete owned VoiceNote (`deletedAt = timestamp`). Owner only. Auth required.
 
 ### 6. Activity Events Foundation (Phase 10)
-- **`GET /api/activity/me`**: Retrieve paginated list of activity events generated by authenticated user (`?page=1&limit=20`). Strictly returns events where `actorId = req.user._id`. Auth required.
+- **`GET /api/activity/me`**: Retrieve paginated list of activity events generated by authenticated user (`?page=1&limit=20`). Auth required.
 
 ### 7. In-App Notifications & Real-Time Delivery (Phase 11, Phase 12 & Phase 13)
-- **`GET /api/notifications`**: Retrieve paginated notifications for authenticated user (`?page=1&limit=20&unread=true`). Includes total `unreadCount`. Auth required.
-- **`GET /api/notifications/preferences`**: Retrieve notification preferences for authenticated user (`{ userFollowed: boolean, voiceNoteLiked: boolean }`). Auth required.
-- **`PATCH /api/notifications/preferences`**: Update notification preferences for authenticated user (partial boolean updates). Rejects non-booleans and unknown keys (`400 Bad Request`). Auth required.
-- **`PATCH /api/notifications/read-all`**: Mark all unread notifications for authenticated user as read (`{ updatedCount: number }`). Auth required.
-- **`PATCH /api/notifications/:id/read`**: Mark a single notification owned by authenticated user as read (`{ read: true }`). Auth required.
-- **Socket.IO Real-Time Gateway**: Authenticated sockets (`auth.token`) join room `user:<userId>`. Emits `notification:new` payloads instantly to connected recipient sockets upon database persistence.
+- **`GET /api/notifications`**: Retrieve paginated notifications for authenticated user (`?page=1&limit=20&unread=true`). Auth required.
+- **`GET /api/notifications/preferences`**: Retrieve notification preferences for authenticated user. Auth required.
+- **`PATCH /api/notifications/preferences`**: Update notification preferences for authenticated user. Auth required.
+- **`PATCH /api/notifications/read-all`**: Mark all unread notifications as read. Auth required.
+- **`PATCH /api/notifications/:id/read`**: Mark single notification as read. Auth required.
+- **Socket.IO Real-Time Gateway**: Authenticated sockets (`auth.token`) join room `user:<userId>`. Emits `notification:new` payloads instantly.
 
 ### 8. Likes (Phase 5)
-- **`POST /api/vns/:id/like`**: Add a Like for a VoiceNote. Idempotent (`{ liked: true }`). Auth required.
-- **`DELETE /api/vns/:id/like`**: Remove a Like for a VoiceNote. Idempotent (`{ liked: false }`). Auth required.
+- **`POST /api/vns/:id/like`**: Add a Like for a VoiceNote. Idempotent. Auth required.
+- **`DELETE /api/vns/:id/like`**: Remove a Like for a VoiceNote. Idempotent. Auth required.
 - **`GET /api/vns/:id/likes`**: Get aggregate Like count and `likedByMe` status. Optional auth.
 
-### 9. Albums & Album Items (Phase 5 - Private Collections)
-- **`POST /api/albums`**: Create a new Album (`title`, `description`, `coverImage`). Auth required.
+### 9. Albums & Album Discovery (Phase 5 & Phase 15)
+- **`GET /api/albums/discover`**: Retrieve paginated discovery feed of public Albums (`visibility = 'public'`). Optional auth.
+- **`GET /api/albums/search`**: Search public Albums by `title` and `description` (`?q=query&page=1&limit=20`). Optional auth.
+- **`POST /api/albums`**: Create a new Album (`title`, `description`, `coverImage`, `visibility`). Auth required.
 - **`GET /api/albums`**: Retrieve paginated list of Albums owned by current user. Auth required.
-- **`GET /api/albums/:id`**: Retrieve single Album owned by user with items sorted by `position ASC`. Filters out soft-deleted VoiceNotes. Auth required.
-- **`PATCH /api/albums/:id`**: Update Album metadata (`title`, `description`, `coverImage`). Auth required.
-- **`DELETE /api/albums/:id`**: Delete Album and its `AlbumItem` join records. **Does NOT delete VoiceNote documents or audio files on disk.** Auth required.
-- **`POST /api/albums/:id/items`**: Add an accessible active VoiceNote to an Album (`voiceNoteId`). Auto-assigns next `position`. Auth required.
-- **`DELETE /api/albums/:id/items/:itemId`**: Remove an item from an Album. **Does NOT delete VoiceNote or audio file.** Auth required.
-- **`PATCH /api/albums/:id/items/reorder`**: Reorder Album items (`items: [{ itemId, position }]`). Uses two-phase atomic updates to satisfy compound unique index `{ albumId: 1, position: 1 }`. Auth required.
+- **`GET /api/albums/:id`**: Retrieve single Album with items sorted by `position ASC`. Public if `visibility = 'public'`, owner-only if `visibility = 'private'`. Filters out private and deleted VoiceNotes for non-owners. Optional auth.
+- **`PATCH /api/albums/:id`**: Update Album metadata (`title`, `description`, `coverImage`, `visibility`). Auth required.
+- **`DELETE /api/albums/:id`**: Delete Album and its `AlbumItem` join records. Auth required.
+- **`POST /api/albums/:id/items`**: Add an accessible active VoiceNote to an Album (`voiceNoteId`). Auth required.
+- **`DELETE /api/albums/:id/items/:itemId`**: Remove an item from an Album. Auth required.
+- **`PATCH /api/albums/:id/items/reorder`**: Reorder Album items (`items: [{ itemId, position }]`). Uses two-phase atomic updates. Auth required.
 
 ---
 
-## Data Models (Phase 1, Phase 6, Phase 7, Phase 8, Phase 10, Phase 11, Phase 12 & Phase 14)
+## Data Models (Phase 1, Phase 6, Phase 7, Phase 8, Phase 10, Phase 11, Phase 12, Phase 14 & Phase 15)
 
 - **`User`** (`src/models/User.js`): Accounts (`username`, `email`, `passwordHash`, `avatar`, `bio`, `timestamps`).
-- **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `tags`, `audioUrl`, `duration`, `visibility`, `deletedAt`, `timestamps`). Compound indexes on `{ ownerId: 1, deletedAt: 1, createdAt: -1 }`, `{ visibility: 1, deletedAt: 1, createdAt: -1 }`, `{ visibility: 1, tags: 1, deletedAt: 1, createdAt: -1 }`, and `{ ownerId: 1, visibility: 1, deletedAt: 1, createdAt: -1 }`.
+- **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `tags`, `audioUrl`, `duration`, `visibility`, `deletedAt`, `timestamps`).
 - **`Like`** (`src/models/Like.js`): Likes join schema (`userId`, `voiceNoteId`, `createdAt`).
-- **`Album`** (`src/models/Album.js`): Albums (`ownerId`, `title`, `description`, `coverImage`, `timestamps`).
+- **`Album`** (`src/models/Album.js`): Albums (`ownerId`, `title`, `description`, `coverImage`, `visibility`, `timestamps`). Compound indexes on `{ ownerId: 1, createdAt: -1 }`, `{ visibility: 1, createdAt: -1 }`, and `{ ownerId: 1, visibility: 1, createdAt: -1 }`.
 - **`AlbumItem`** (`src/models/AlbumItem.js`): Album items join schema (`albumId`, `voiceNoteId`, `position`, `createdAt`).
-- **`Follow`** (`src/models/Follow.js`): Follow social graph (`followerId`, `followingId`, `createdAt`). Database unique index `{ followerId: 1, followingId: 1 }`.
+- **`Follow`** (`src/models/Follow.js`): Follow social graph (`followerId`, `followingId`, `createdAt`).
 - **`ActivityEvent`** (`src/models/ActivityEvent.js`): Internal activity logs (`actorId`, `type`, `targetType`, `targetId`, `metadata`, `createdAt`).
-- **`Notification`** (`src/models/Notification.js`): In-app notifications (`recipientId`, `actorId`, `type`, `targetType`, `targetId`, `activityEventId`, `metadata`, `readAt`, `createdAt`). Unique index on `{ activityEventId: 1 }`.
-- **`NotificationPreference`** (`src/models/NotificationPreference.js`): User notification controls (`userId`, `userFollowed`, `voiceNoteLiked`, `createdAt`, `updatedAt`). Unique index on `{ userId: 1 }`.
+- **`Notification`** (`src/models/Notification.js`): In-app notifications (`recipientId`, `actorId`, `type`, `targetType`, `targetId`, `activityEventId`, `metadata`, `readAt`, `createdAt`).
+- **`NotificationPreference`** (`src/models/NotificationPreference.js`): User notification controls (`userId`, `userFollowed`, `voiceNoteLiked`, `createdAt`, `updatedAt`).
 
 ---
 
-## Current Status & Phase 14 Scope
+## Current Status & Phase 15 Scope
 
 > [!NOTE]
-> **Phase 0 through Phase 14 Status: COMPLETE.**
-> VoiceNote lifecycle management (`deletedAt` soft-deletion), failure-safe audio replacement (`PATCH /api/vns/:id/audio`), owner authorization, deleted content isolation across search/feed/tags/profiles/following feed/albums/statistics, stream/download protection, and regression safety are fully implemented and verified via 47 automated tests (577 total test cases across all phases).
+> **Phase 0 through Phase 15 Status: COMPLETE.**
+> Public/private Album visibility system, public album pages (`GET /api/albums/:id`), public album discovery (`GET /api/albums/discover`), album search (`GET /api/albums/search`), creator public album listings (`GET /api/users/:username/albums`), profile statistics integration (`stats.publicAlbums`), VoiceNote privacy & soft-deletion isolation, and regression safety are fully implemented and verified via 64 automated tests (641 total test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
 - ❌ Push notifications (FCM / APNs)
 - ❌ Email & SMS notifications
-- ❌ Public albums and album sharing
-- ❌ Comments
+- ❌ Album comments & album likes
+- ❌ Album followers
+- ❌ Comments & replies
 - ❌ Recommendation algorithms
 - ❌ Listening & download history analytics
 
@@ -259,4 +266,4 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 
 ## Future Roadmap
 
-1. **Phase 15 — User Comments & Discussions:** VoiceNote comments, comment replies, and comment notifications.
+1. **Phase 16 — User Comments & Discussions:** VoiceNote comments, comment replies, and comment notifications.

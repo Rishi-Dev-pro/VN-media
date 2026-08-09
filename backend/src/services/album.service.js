@@ -37,7 +37,7 @@ class AlbumService {
   /**
    * Create a new Album owned by the authenticated user.
    */
-  async createAlbum({ user, title, description, coverImage }) {
+  async createAlbum({ user, title, description, coverImage, visibility = 'private' }) {
     if (!user || !user._id) {
       const err = new Error('Authentication required');
       err.statusCode = 401;
@@ -62,11 +62,18 @@ class AlbumService {
       throw err;
     }
 
+    if (visibility !== undefined && !['public', 'private'].includes(visibility)) {
+      const err = new Error('Visibility must be either public or private');
+      err.statusCode = 400;
+      throw err;
+    }
+
     const album = await Album.create({
       ownerId: user._id,
       title: title.trim(),
       description: description ? description.trim() : '',
       coverImage: coverImage ? coverImage.trim() : null,
+      visibility: visibility || 'private',
     });
 
     // Record ALBUM_CREATED activity event
@@ -112,19 +119,29 @@ class AlbumService {
   }
 
   /**
-   * Get a single Album owned by authenticated user with ordered items.
+   * Get a single Album with ordered items (public or owner access).
    */
-  async getAlbumById({ albumId, userId }) {
-    const album = await Album.findById(albumId);
+  async getAlbumById({ albumId, user, userId }) {
+    const requestingUserId = user && user._id ? user._id.toString() : userId ? userId.toString() : null;
+
+    const album = await Album.findById(albumId).populate('ownerId', 'username avatar bio');
     if (!album) {
       const err = new Error('Album not found');
       err.statusCode = 404;
       throw err;
     }
 
-    if (album.ownerId.toString() !== userId.toString()) {
-      const err = new Error('Access denied: You do not have permission to access this album');
-      err.statusCode = 403;
+    const ownerIdStr = album.ownerId && album.ownerId._id
+      ? album.ownerId._id.toString()
+      : album.ownerId
+      ? album.ownerId.toString()
+      : '';
+
+    const isOwner = requestingUserId && requestingUserId === ownerIdStr;
+
+    if (album.visibility === 'private' && !isOwner) {
+      const err = new Error('Album not found');
+      err.statusCode = 404;
       throw err;
     }
 
@@ -136,7 +153,11 @@ class AlbumService {
       });
 
     const items = rawItems
-      .filter((item) => item.voiceNoteId && !item.voiceNoteId.deletedAt)
+      .filter((item) => {
+        if (!item.voiceNoteId || item.voiceNoteId.deletedAt) return false;
+        if (isOwner) return true;
+        return item.voiceNoteId.visibility === 'public';
+      })
       .map((item) => ({
         id: item._id.toString(),
         position: item.position,
@@ -152,7 +173,7 @@ class AlbumService {
   /**
    * Update metadata of an Album owned by authenticated user.
    */
-  async updateAlbum({ albumId, userId, title, description, coverImage }) {
+  async updateAlbum({ albumId, userId, title, description, coverImage, visibility }) {
     const album = await Album.findById(albumId);
     if (!album) {
       const err = new Error('Album not found');
@@ -193,8 +214,201 @@ class AlbumService {
       album.coverImage = coverImage ? coverImage.trim() : null;
     }
 
+    if (visibility !== undefined) {
+      if (!['public', 'private'].includes(visibility)) {
+        const err = new Error('Visibility must be either public or private');
+        err.statusCode = 400;
+        throw err;
+      }
+      album.visibility = visibility;
+    }
+
     await album.save();
     return album;
+  }
+
+  /**
+   * Get paginated discovery feed of public Albums.
+   */
+  async getPublicAlbums({ page = 1, limit = 20 }) {
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const query = { visibility: 'public' };
+
+    const [albums, total] = await Promise.all([
+      Album.find(query)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .populate('ownerId', 'username avatar bio'),
+      Album.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / parsedLimit) || 0;
+
+    const albumIds = albums.map((a) => a._id);
+    const albumItems = await AlbumItem.find({ albumId: { $in: albumIds } })
+      .populate('voiceNoteId', 'visibility deletedAt');
+
+    const itemCountMap = {};
+    for (const item of albumItems) {
+      if (item.voiceNoteId && item.voiceNoteId.visibility === 'public' && !item.voiceNoteId.deletedAt) {
+        const albumIdStr = item.albumId.toString();
+        itemCountMap[albumIdStr] = (itemCountMap[albumIdStr] || 0) + 1;
+      }
+    }
+
+    const albumsWithStats = albums.map((album) => {
+      const albumObj = album.toObject();
+      albumObj.publicItemCount = itemCountMap[album._id.toString()] || 0;
+      return albumObj;
+    });
+
+    return {
+      albums: albumsWithStats,
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  /**
+   * Search public Albums by title or description.
+   */
+  async searchPublicAlbums({ q, page = 1, limit = 20 }) {
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const MAX_SEARCH_QUERY_LENGTH = 100;
+    const query = { visibility: 'public' };
+
+    if (q && typeof q === 'string' && q.trim()) {
+      const trimmedQ = q.trim();
+      if (trimmedQ.length > MAX_SEARCH_QUERY_LENGTH) {
+        const err = new Error(`Search query cannot exceed ${MAX_SEARCH_QUERY_LENGTH} characters`);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const escapedQ = trimmedQ.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const searchRegex = new RegExp(escapedQ, 'i');
+
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+      ];
+    }
+
+    const [albums, total] = await Promise.all([
+      Album.find(query)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .populate('ownerId', 'username avatar bio'),
+      Album.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / parsedLimit) || 0;
+
+    const albumIds = albums.map((a) => a._id);
+    const albumItems = await AlbumItem.find({ albumId: { $in: albumIds } })
+      .populate('voiceNoteId', 'visibility deletedAt');
+
+    const itemCountMap = {};
+    for (const item of albumItems) {
+      if (item.voiceNoteId && item.voiceNoteId.visibility === 'public' && !item.voiceNoteId.deletedAt) {
+        const albumIdStr = item.albumId.toString();
+        itemCountMap[albumIdStr] = (itemCountMap[albumIdStr] || 0) + 1;
+      }
+    }
+
+    const albumsWithStats = albums.map((album) => {
+      const albumObj = album.toObject();
+      albumObj.publicItemCount = itemCountMap[album._id.toString()] || 0;
+      return albumObj;
+    });
+
+    return {
+      albums: albumsWithStats,
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  /**
+   * Get paginated public Albums owned by a creator by username.
+   */
+  async getPublicUserAlbums({ username, page = 1, limit = 20 }) {
+    if (!username || typeof username !== 'string' || !username.trim()) {
+      const err = new Error('Username parameter is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const User = require('../models/User');
+    const escapedUsername = username.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const user = await User.findOne({ username: new RegExp(`^${escapedUsername}$`, 'i') });
+
+    if (!user) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const query = { ownerId: user._id, visibility: 'public' };
+
+    const [albums, total] = await Promise.all([
+      Album.find(query)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .populate('ownerId', 'username avatar bio'),
+      Album.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / parsedLimit) || 0;
+
+    const albumIds = albums.map((a) => a._id);
+    const albumItems = await AlbumItem.find({ albumId: { $in: albumIds } })
+      .populate('voiceNoteId', 'visibility deletedAt');
+
+    const itemCountMap = {};
+    for (const item of albumItems) {
+      if (item.voiceNoteId && item.voiceNoteId.visibility === 'public' && !item.voiceNoteId.deletedAt) {
+        const albumIdStr = item.albumId.toString();
+        itemCountMap[albumIdStr] = (itemCountMap[albumIdStr] || 0) + 1;
+      }
+    }
+
+    const albumsWithStats = albums.map((album) => {
+      const albumObj = album.toObject();
+      albumObj.publicItemCount = itemCountMap[album._id.toString()] || 0;
+      return albumObj;
+    });
+
+    return {
+      albums: albumsWithStats,
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        totalPages,
+      },
+    };
   }
 
   /**

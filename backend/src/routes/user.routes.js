@@ -5,6 +5,7 @@ const {
   updateMe,
   getPublicProfile,
   getPublicUserVoiceNotes,
+  getPublicUserAlbums,
 } = require('../controllers/user.controller');
 const {
   followUser,
@@ -29,8 +30,9 @@ router.get('/:id/follow-status', protect, getFollowStatus);
 router.get('/:id/followers', protectOptional, getFollowers);
 router.get('/:id/following', protectOptional, getFollowing);
 
-// Public creator profile & voice notes routes (Unauthenticated / Public)
+// Public creator profile, voice notes, & albums routes (Unauthenticated / Public)
 router.get('/:username', protectOptional, getPublicProfile);
 router.get('/:username/voice-notes', protectOptional, getPublicUserVoiceNotes);
+router.get('/:username/albums', protectOptional, getPublicUserAlbums);
 
 module.exports = router;

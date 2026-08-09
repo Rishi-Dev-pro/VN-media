@@ -1,22 +1,27 @@
 const express = require('express');
 const albumController = require('../controllers/album.controller');
-const { protect } = require('../middleware/auth');
+const { protect, protectOptional } = require('../middleware/auth');
 
 const router = express.Router();
 
-// All album routes require authentication in Phase 5
-router.use(protect);
+// Public Discovery & Search (Unauthenticated / Optional Auth)
+router.get('/discover', protectOptional, albumController.getPublicAlbums);
+router.get('/search', protectOptional, albumController.searchAlbums);
 
-// Album CRUD endpoints
-router.post('/', albumController.createAlbum);
-router.get('/', albumController.getOwnerAlbums);
-router.get('/:id', albumController.getAlbumById);
-router.patch('/:id', albumController.updateAlbum);
-router.delete('/:id', albumController.deleteAlbum);
+// Owner-scoped list (Requires Auth)
+router.get('/', protect, albumController.getOwnerAlbums);
 
-// Album Item management endpoints
-router.post('/:id/items', albumController.addAlbumItem);
-router.patch('/:id/items/reorder', albumController.reorderAlbumItems);
-router.delete('/:id/items/:itemId', albumController.removeAlbumItem);
+// Create Album (Requires Auth)
+router.post('/', protect, albumController.createAlbum);
+
+// Single Album access (Public if visibility='public', Owner-only if visibility='private')
+router.get('/:id', protectOptional, albumController.getAlbumById);
+router.patch('/:id', protect, albumController.updateAlbum);
+router.delete('/:id', protect, albumController.deleteAlbum);
+
+// Album Item management endpoints (Requires Auth)
+router.post('/:id/items', protect, albumController.addAlbumItem);
+router.patch('/:id/items/reorder', protect, albumController.reorderAlbumItems);
+router.delete('/:id/items/:itemId', protect, albumController.removeAlbumItem);
 
 module.exports = router;
