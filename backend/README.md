@@ -60,6 +60,9 @@ This repository contains the backend REST API foundation, database models, and a
 
    # Run Phase 4 Public/Private Access, Streaming & Download Tests
    node tests/testPhase4Access.js
+
+   # Run Phase 5 Likes & Album Management Tests
+   node tests/testPhase5SocialAlbums.js
    ```
 
 ---
@@ -92,12 +95,12 @@ npm start
 
 ---
 
-## Storage & Streaming Architecture (Phase 3 & Phase 4)
+## Storage & Streaming Architecture (Phase 3, Phase 4 & Phase 5)
 
 The Voice Note storage and streaming foundation utilizes a decoupled **Storage Service Abstraction** pattern:
 
 ```text
-Voice Note Controller
+Voice Note Controller / Album Controller / Like Controller
         ↓
    VoiceNote Service (Centralized Auth & Storage Stream orchestration)
         ↓
@@ -116,14 +119,13 @@ Voice Note Controller
 | `GET /api/vns/:id` | `private` | Owner | ALLOW | `200 OK` |
 | `GET /api/vns/:id` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
 | `GET /api/vns/:id` | `private` | Unauthenticated Guest | DENIED | `401 Unauthorized` |
-| `GET /api/vns/:id/stream` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200` / `206` |
-| `GET /api/vns/:id/stream` | `private` | Owner | ALLOW | `200` / `206` |
-| `GET /api/vns/:id/stream` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
-| `GET /api/vns/:id/stream` | `private` | Unauthenticated Guest | DENIED | `401 Unauthorized` |
-| `GET /api/vns/:id/download` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
-| `GET /api/vns/:id/download` | `private` | Owner | ALLOW | `200 OK` |
-| `GET /api/vns/:id/download` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
-| `GET /api/vns/:id/download` | `private` | Unauthenticated Guest | DENIED | `401 Unauthorized` |
+| `POST /api/vns/:id/like` | `public` | Authenticated User / Owner | ALLOW | `200 OK` |
+| `POST /api/vns/:id/like` | `private` | Owner | ALLOW | `200 OK` |
+| `POST /api/vns/:id/like` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
+| `POST /api/vns/:id/like` | Any | Unauthenticated Guest | DENIED | `401 Unauthorized` |
+| `POST /api/albums/:id/items` | `public` | Album Owner | ALLOW | `201 Created` |
+| `POST /api/albums/:id/items` | `private` | Album & VN Owner (Same User) | ALLOW | `201 Created` |
+| `POST /api/albums/:id/items` | `private` | Non-Owner of Private VN | DENIED | `403 Forbidden` |
 
 ---
 
@@ -150,34 +152,30 @@ Authorization: Bearer <token>
 
 ### 4. Voice Note Management (Phase 3 & Phase 4)
 - **`GET /api/vns/feed`**: Retrieve public discovery feed (`visibility = 'public'`).
-  - **Auth:** Optional (`protectOptional`)
-  - **Query Params:** `?page=1&limit=20`
-  - **Response (200 OK):** Returns public VoiceNotes list with populated owner objects (`owner: { id, username }`).
-
 - **`POST /api/vns`**: Upload an audio file and create a VoiceNote.
-  - **Auth:** Required (`protect`)
-  - **Content-Type:** `multipart/form-data`
-  - **Form Data Fields:** `audio` *(file)*, `title` *(string)*, `description` *(string)*, `visibility` (`public` / `private`)
-
 - **`GET /api/vns/me`**: Retrieve paginated list of VoiceNotes owned by current user.
-  - **Auth:** Required (`protect`)
-
-- **`GET /api/vns/:id`**: Retrieve a single VoiceNote metadata.
-  - **Auth:** Optional (`protectOptional`)
-  - **Access Control:** Public VNs accessible to anyone. Private VNs accessible only to owner (Non-owners receive `403 Forbidden`, guests receive `401 Unauthorized`).
-
+- **`GET /api/vns/:id`**: Retrieve single VoiceNote metadata.
 - **`GET /api/vns/:id/stream`**: Stream audio file with HTTP Range support (`bytes=start-end`).
-  - **Auth:** Optional (`protectOptional`)
-  - **Access Control:** Obey centralized access matrix.
-  - **Response:** `200 OK` (full file stream) or `206 Partial Content` (range stream with `Content-Range`, `Content-Length`, `Accept-Ranges: bytes`).
-
 - **`GET /api/vns/:id/download`**: Download complete audio file.
-  - **Auth:** Optional (`protectOptional`)
-  - **Access Control:** Obey centralized access matrix.
-  - **Response (200 OK):** Streams file with `Content-Disposition: attachment; filename="<sanitized_filename>"`.
-
 - **`DELETE /api/vns/:id`**: Delete owned VoiceNote and remove stored audio file.
-  - **Auth:** Required (`protect`)
+
+### 5. Likes (Phase 5)
+- **`POST /api/vns/:id/like`**: Add a Like for a VoiceNote. Idempotent (`{ liked: true }`). Auth required.
+- **`DELETE /api/vns/:id/like`**: Remove a Like for a VoiceNote. Idempotent (`{ liked: false }`). Auth required.
+- **`GET /api/vns/:id/likes`**: Get aggregate Like count and `likedByMe` status. Optional auth.
+
+### 6. Albums & Album Items (Phase 5 - Private Collections)
+> [!IMPORTANT]
+> **Albums are private owner-managed collections.** Public albums and album sharing are intentionally not implemented yet.
+
+- **`POST /api/albums`**: Create a new Album (`title`, `description`, `coverImage`). Auth required.
+- **`GET /api/albums`**: Retrieve paginated list of Albums owned by current user. Auth required.
+- **`GET /api/albums/:id`**: Retrieve single Album owned by user with items sorted by `position ASC`. Auth required.
+- **`PATCH /api/albums/:id`**: Update Album metadata (`title`, `description`, `coverImage`). Auth required.
+- **`DELETE /api/albums/:id`**: Delete Album and its `AlbumItem` join records. **Does NOT delete VoiceNote documents or audio files on disk.** Auth required.
+- **`POST /api/albums/:id/items`**: Add an accessible VoiceNote to an Album (`voiceNoteId`). Auto-assigns next `position`. Auth required.
+- **`DELETE /api/albums/:id/items/:itemId`**: Remove an item from an Album. **Does NOT delete VoiceNote or audio file.** Auth required.
+- **`PATCH /api/albums/:id/items/reorder`**: Reorder Album items (`items: [{ itemId, position }]`). Uses two-phase atomic updates to satisfy compound unique index `{ albumId: 1, position: 1 }`. Auth required.
 
 ---
 
@@ -191,24 +189,25 @@ Authorization: Bearer <token>
 
 ---
 
-## Current Status & Phase 4 Scope
+## Current Status & Phase 5 Scope
 
 > [!NOTE]
-> **Phase 0, Phase 1, Phase 2, Phase 3 & Phase 4 Status: COMPLETE.**
-> Access authorization, public discovery feed, HTTP range streaming, controlled downloads, and privacy enforcement across all endpoints are fully implemented and verified via 32 automated tests (82 total test cases across all phases).
+> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4 & Phase 5 Status: COMPLETE.**
+> Likes, aggregate counts, private owner-managed albums, item position auto-assignment, two-phase atomic reordering, data cleanup, and privacy enforcement across all endpoints are fully implemented and verified via 43 automated tests (135 total test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
-- ❌ Likes API endpoints (`POST /api/vns/:id/like`)
-- ❌ Albums API & item reordering
+- ❌ Public albums and album sharing
 - ❌ Search & user feed algorithms
-- ❌ Comments & social features
+- ❌ Comments & social follower networks
+- ❌ Notifications & recommendations
 - ❌ React Native / Mobile offline playback manager
-- ❌ Listening / Download history analytics
+- ❌ Play history & download analytics
 
 ---
 
 ## Future Roadmap
 
-1. **Phase 5 — Social Features & Albums:** Likes API, Album CRUD, AlbumItem ordering endpoints, follower feeds.
+1. **Phase 6 — Search, Playlists & Social Discovery:** Text search, tag discovery, public albums, user feeds, and follower interactions.
+
 
 
