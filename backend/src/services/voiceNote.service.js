@@ -392,6 +392,64 @@ class VoiceNoteService {
   }
 
   /**
+   * Get paginated personalized feed of public VoiceNotes uploaded by creators followed by user.
+   * MANDATORY: Requires authentication, strictly filters visibility = 'public'.
+   */
+  async getFollowingFeed({ userId, page = 1, limit = 20 }) {
+    if (!userId) {
+      const err = new Error('Authentication required');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const Follow = require('../models/Follow');
+
+    // 1. Find all user IDs followed by current user
+    const follows = await Follow.find({ followerId: userId }).select('followingId');
+    const followedUserIds = follows.map((f) => f.followingId);
+
+    if (followedUserIds.length === 0) {
+      return {
+        voiceNotes: [],
+        pagination: {
+          page: parsedPage,
+          limit: parsedLimit,
+          total: 0,
+          totalPages: 0,
+        },
+      };
+    }
+
+    // 2. Query public VoiceNotes created by followed users
+    const query = { ownerId: { $in: followedUserIds }, visibility: 'public' };
+
+    const [voiceNotes, total] = await Promise.all([
+      VoiceNote.find(query)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .populate('ownerId', 'username'),
+      VoiceNote.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / parsedLimit) || 0;
+
+    return {
+      voiceNotes,
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  /**
    * Get paginated list of VoiceNotes owned by authenticated user.
    */
   async getOwnerVoiceNotes({ userId, page = 1, limit = 20 }) {

@@ -6,8 +6,9 @@ const { uploadSingleAudio } = require('../middleware/upload');
 
 const router = express.Router();
 
-// Public Feed, Search, and Tag Discovery (unauthenticated/optional auth)
+// Public Feed, Following Feed, Search, and Tag Discovery
 router.get('/feed', protectOptional, voiceNoteController.getPublicFeed);
+router.get('/feed/following', protect, voiceNoteController.getFollowingFeed);
 router.get('/search', protectOptional, voiceNoteController.searchVoiceNotes);
 router.get('/tags/:tag', protectOptional, voiceNoteController.getVoiceNotesByTag);
 

@@ -72,6 +72,9 @@ This repository contains the backend REST API foundation, database models, and a
 
    # Run Phase 8 Followers & Following Social Graph Tests
    node tests/testPhase8Follows.js
+
+   # Run Phase 9 Following Feed Tests
+   node tests/testPhase9FollowingFeed.js
    ```
 
 ---
@@ -104,14 +107,14 @@ npm start
 
 ---
 
-## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5, Phase 6, Phase 7 & Phase 8)
+## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5, Phase 6, Phase 7, Phase 8 & Phase 9)
 
 The Voice Note storage and streaming foundation utilizes a decoupled **Storage Service Abstraction** pattern:
 
 ```text
 User Controller / Follow Controller / Voice Note Controller / Album Controller / Like Controller
         ↓
-   User Service / Follow Service / VoiceNote Service (Centralized Auth, Social Graph & Stream orchestration)
+   User Service / Follow Service / VoiceNote Service (Centralized Auth, Following Feed & Stream orchestration)
         ↓
    Storage Service (Decoupled abstraction layer)
         ↓
@@ -121,16 +124,16 @@ User Controller / Follow Controller / Voice Note Controller / Album Controller /
 ### Access & Discovery Authorization Matrix (Single Source of Truth)
 
 > [!IMPORTANT]
-> **Privacy Invariant**: Following a user **DOES NOT** grant access to private VoiceNotes or private Albums. Phase 4 and Phase 5 access controls remain 100% unchanged. Followers (`GET /api/users/:id/followers`) and Following (`GET /api/users/:id/following`) lists expose only safe public user fields (`id`, `username`, `avatar`, `bio`, `createdAt`). `email` and `passwordHash` are **NEVER** exposed.
+> **Privacy Invariant**: The following feed (`GET /api/vns/feed/following`) contains **ONLY** public VoiceNotes (`visibility = 'public'`) uploaded by creators currently followed by the authenticated user. Following a creator **DOES NOT** grant access to stream or download their private VoiceNotes or private Albums.
 
 | Endpoint Request | VoiceNote Visibility | Requester Role | Result | HTTP Status |
 | :--- | :--- | :--- | :--- | :--- |
+| `GET /api/vns/feed/following` | `public` | Follower | ALLOW (Paginated feed of followed creators) | `200 OK` |
+| `GET /api/vns/feed/following` | `private` | Follower | DENIED (Excluded from following feed) | N/A |
+| `GET /api/vns/feed/following` | `public` | Unfollowed User | DENIED (Excluded from following feed) | N/A |
+| `GET /api/vns/feed/following` | Any | Unauthenticated Guest | DENIED | `401 Unauthorized` |
 | `POST /api/users/:id/follow` | Any | Authenticated User | ALLOW (Idempotent follow) | `200 OK` / `201 Created` |
 | `DELETE /api/users/:id/follow` | Any | Authenticated User | ALLOW (Idempotent unfollow) | `200 OK` |
-| `GET /api/users/:id/follow-status` | Any | Authenticated User | ALLOW (`{ following: boolean }`) | `200 OK` |
-| `GET /api/users/:id/followers` | Any | Anyone (Guest / User / Owner) | ALLOW (Paginated public followers) | `200 OK` |
-| `GET /api/users/:id/following` | Any | Anyone (Guest / User / Owner) | ALLOW (Paginated public following) | `200 OK` |
-| `GET /api/users/:username` | Any | Anyone (Guest / User / Owner) | ALLOW (Public profile, stats & relationship) | `200 OK` |
 
 ---
 
@@ -164,8 +167,9 @@ Authorization: Bearer <token>
 - **`GET /api/users/:id/followers`**: Retrieve paginated list of users following target user (`?page=1&limit=20`). Accepts User ID or username. Public / Unauthenticated.
 - **`GET /api/users/:id/following`**: Retrieve paginated list of users followed by target user (`?page=1&limit=20`). Accepts User ID or username. Public / Unauthenticated.
 
-### 5. Voice Note Management & Discovery (Phase 3, Phase 4 & Phase 6)
-- **`GET /api/vns/feed`**: Retrieve public discovery feed (`visibility = 'public'`). Optional auth.
+### 5. Voice Note Management & Discovery (Phase 3, Phase 4, Phase 6 & Phase 9)
+- **`GET /api/vns/feed`**: Retrieve global public discovery feed (`visibility = 'public'`). Optional auth.
+- **`GET /api/vns/feed/following`**: Retrieve personalized feed of public VoiceNotes from followed creators (`?page=1&limit=20`). Strictly excludes private VoiceNotes and unfollowed creators. Auth required.
 - **`GET /api/vns/search`**: Search public VoiceNotes across `title`, `description`, and `tags` (`?q=term&page=1&limit=20`). Empty `q` returns recent public VoiceNotes. Optional auth.
 - **`GET /api/vns/tags/:tag`**: Retrieve public VoiceNotes matching a normalized tag (`?page=1&limit=20`). Optional auth.
 - **`POST /api/vns`**: Upload an audio file and create a VoiceNote (`audio`, `title`, `description`, `visibility`, `tags`). Auth required.
@@ -204,14 +208,14 @@ Authorization: Bearer <token>
 
 ---
 
-## Current Status & Phase 8 Scope
+## Current Status & Phase 9 Scope
 
 > [!NOTE]
-> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7 & Phase 8 Status: COMPLETE.**
-> Social graph follow/unfollow relationships, follow status checks, public followers/following lists, database-level unique constraints, self-follow prevention, username change relationship preservation, and regression safety are fully implemented and verified via 52 automated tests (264 total test cases across all phases).
+> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7, Phase 8 & Phase 9 Status: COMPLETE.**
+> Personalized following feed (`GET /api/vns/feed/following`), strict database-level privacy isolation, dynamic follow/unfollow updates, public/private visibility transitions, and regression safety are fully implemented and verified via 49 automated tests (313 total test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
-- ❌ Following activity feed & social notifications
+- ❌ Notifications & activity events
 - ❌ Public albums and album sharing
 - ❌ User activity feeds
 - ❌ Comments & notifications
@@ -222,7 +226,7 @@ Authorization: Bearer <token>
 
 ## Future Roadmap
 
-1. **Phase 9 — Social Activity Feed & Notifications:** Following activity feed, user activity notifications, and social discovery recommendations.
+1. **Phase 10 — Notifications & Activity Triggers:** Social notifications, activity triggers, and creator recommendations.
 
 
 

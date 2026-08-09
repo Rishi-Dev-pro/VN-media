@@ -144,6 +144,27 @@ const getPublicFeed = async (req, res, next) => {
 };
 
 /**
+ * Get personalized following feed of public VoiceNotes from followed creators.
+ * GET /api/vns/feed/following
+ */
+const getFollowingFeed = async (req, res, next) => {
+  try {
+    const { voiceNotes, pagination } = await voiceNoteService.getFollowingFeed({
+      userId: req.user._id,
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+
+    return sendSuccess(res, 'Following feed retrieved successfully', {
+      items: voiceNotes.map(formatVoiceNote),
+      pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Get paginated list of authenticated user's own VoiceNotes.
  * GET /api/vns/me
  */
@@ -286,6 +307,7 @@ module.exports = {
   searchVoiceNotes,
   getVoiceNotesByTag,
   getPublicFeed,
+  getFollowingFeed,
   getOwnerVoiceNotes,
   getVoiceNoteById,
   streamVoiceNote,
