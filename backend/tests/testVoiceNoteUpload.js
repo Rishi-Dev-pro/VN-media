@@ -358,6 +358,7 @@ const runTests = async () => {
     // Test 14: Client cannot assign another user's ID as owner
     const formSpoofOwner = createUploadFormData({
       title: 'Spoof Owner Note',
+      visibility: 'private',
       buffer: createMinimalWavBuffer(1),
       extraFields: { ownerId: userBId }, // Attempting to spoof ownerId
     });

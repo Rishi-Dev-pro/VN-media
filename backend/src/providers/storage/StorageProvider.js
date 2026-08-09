@@ -30,6 +30,25 @@ class StorageProvider {
   async fileExists(storageRef) {
     throw new Error('Method fileExists() must be implemented.');
   }
+
+  /**
+   * Create a readable stream for a stored file.
+   * @param {string} storageRef - Relative storage reference
+   * @param {object} [options] - Stream options (e.g. { start, end })
+   * @returns {ReadableStream|object} Node.js ReadableStream
+   */
+  createReadStream(storageRef, options) {
+    throw new Error('Method createReadStream() must be implemented.');
+  }
+
+  /**
+   * Get file metadata/stats (e.g., size).
+   * @param {string} storageRef - Relative storage reference
+   * @returns {Promise<{ size: number }>} File stats
+   */
+  async getFileStats(storageRef) {
+    throw new Error('Method getFileStats() must be implemented.');
+  }
 }
 
 module.exports = StorageProvider;

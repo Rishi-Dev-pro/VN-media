@@ -57,6 +57,9 @@ This repository contains the backend REST API foundation, database models, and a
 
    # Run Phase 3 Voice Note Upload & Storage Tests
    node tests/testVoiceNoteUpload.js
+
+   # Run Phase 4 Public/Private Access, Streaming & Download Tests
+   node tests/testPhase4Access.js
    ```
 
 ---
@@ -89,28 +92,38 @@ npm start
 
 ---
 
-## Storage Architecture (Phase 3)
+## Storage & Streaming Architecture (Phase 3 & Phase 4)
 
-The Voice Note storage foundation utilizes a decoupled **Storage Service Abstraction** pattern:
+The Voice Note storage and streaming foundation utilizes a decoupled **Storage Service Abstraction** pattern:
 
 ```text
 Voice Note Controller
         ↓
-   VoiceNote Service (Atomic DB / Storage lifecycle orchestration)
+   VoiceNote Service (Centralized Auth & Storage Stream orchestration)
         ↓
    Storage Service (Decoupled abstraction layer)
         ↓
- LocalStorageProvider (Writes to backend/storage/audio/)
+ LocalStorageProvider (Writes & streams from backend/storage/audio/)
 ```
 
-### Key Security & Reliability Features:
-- **Filename Sanitization**: Uploaded files are assigned UUID v4 names (e.g. `8f2c9a1e-....wav`). Original client filenames and path traversal attempts (`../../`) are stripped.
-- **Audio Validation Policy**:
-  - **Extensions**: `.mp3`, `.wav`, `.m4a`, `.aac`, `.ogg`
-  - **MIME types**: `audio/mpeg`, `audio/wav`, `audio/m4a`, `audio/aac`, `audio/ogg`
-  - **Magic Bytes Validation**: Binary file headers are checked (ID3/MPEG sync, RIFF/WAVE, ftyp, OggS) to reject fake renamed files.
-- **Real Audio Duration**: Duration is calculated directly from audio metadata using `music-metadata`. Client-supplied duration inputs are ignored.
-- **File & Database Consistency**: If MongoDB creation fails after saving an audio file, the stored file is automatically deleted (rollback). Deleting a VoiceNote record removes both the file on disk and the database record.
+### Access Authorization Matrix (Single Source of Truth)
+
+| Endpoint Request | VoiceNote Visibility | Requester Role | Result | HTTP Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET /api/vns/feed` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
+| `GET /api/vns/feed` | `private` | Anyone | DENIED (Excluded from feed) | N/A |
+| `GET /api/vns/:id` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
+| `GET /api/vns/:id` | `private` | Owner | ALLOW | `200 OK` |
+| `GET /api/vns/:id` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
+| `GET /api/vns/:id` | `private` | Unauthenticated Guest | DENIED | `401 Unauthorized` |
+| `GET /api/vns/:id/stream` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200` / `206` |
+| `GET /api/vns/:id/stream` | `private` | Owner | ALLOW | `200` / `206` |
+| `GET /api/vns/:id/stream` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
+| `GET /api/vns/:id/stream` | `private` | Unauthenticated Guest | DENIED | `401 Unauthorized` |
+| `GET /api/vns/:id/download` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
+| `GET /api/vns/:id/download` | `private` | Owner | ALLOW | `200 OK` |
+| `GET /api/vns/:id/download` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
+| `GET /api/vns/:id/download` | `private` | Unauthenticated Guest | DENIED | `401 Unauthorized` |
 
 ---
 
@@ -135,63 +148,36 @@ Authorization: Bearer <token>
 - **`GET /api/users/me`**: Get current authenticated user profile.
 - **`PATCH /api/users/me`**: Update current authenticated user profile (`username`, `avatar`, `bio`).
 
-### 4. Voice Note Management (Phase 3 - Protected)
-- **`POST /api/vns`**: Upload an audio file and create a VoiceNote.
-  - **Headers:** `Authorization: Bearer <token>`
-  - **Content-Type:** `multipart/form-data`
-  - **Form Data Fields:**
-    - `audio` *(required)*: Audio file binary (MP3, WAV, M4A, AAC, OGG)
-    - `title` *(required, max 100 chars)*: Voice note title
-    - `description` *(optional, max 1000 chars)*: Description text
-    - `visibility` *(optional)*: `public` or `private` (default: `public`)
-  - **Response (201 Created):**
-    ```json
-    {
-      "success": true,
-      "message": "Voice note uploaded successfully",
-      "data": {
-        "voiceNote": {
-          "id": "6a77fb...",
-          "ownerId": "6a77fb...",
-          "title": "Morning Motivation",
-          "description": "Daily thoughts.",
-          "audioUrl": "audio/8f2c9a1e-86a3-4c91-9e2b-2a784d1e9f1a.wav",
-          "duration": 3.5,
-          "visibility": "private",
-          "createdAt": "2026-08-09T04:00:00.000Z",
-          "updatedAt": "2026-08-09T04:00:00.000Z"
-        }
-      }
-    }
-    ```
-
-- **`GET /api/vns/me`**: Retrieve paginated list of VoiceNotes owned by current authenticated user.
-  - **Headers:** `Authorization: Bearer <token>`
+### 4. Voice Note Management (Phase 3 & Phase 4)
+- **`GET /api/vns/feed`**: Retrieve public discovery feed (`visibility = 'public'`).
+  - **Auth:** Optional (`protectOptional`)
   - **Query Params:** `?page=1&limit=20`
-  - **Response (200 OK):**
-    ```json
-    {
-      "success": true,
-      "message": "Voice notes retrieved successfully",
-      "data": {
-        "voiceNotes": [...],
-        "pagination": {
-          "page": 1,
-          "limit": 20,
-          "total": 1,
-          "totalPages": 1
-        }
-      }
-    }
-    ```
+  - **Response (200 OK):** Returns public VoiceNotes list with populated owner objects (`owner: { id, username }`).
 
-- **`GET /api/vns/:id`**: Retrieve a single VoiceNote owned by current authenticated user.
-  - **Headers:** `Authorization: Bearer <token>`
-  - **Response (200 OK):** Returns single VoiceNote object. Non-owners receive `403 Forbidden`.
+- **`POST /api/vns`**: Upload an audio file and create a VoiceNote.
+  - **Auth:** Required (`protect`)
+  - **Content-Type:** `multipart/form-data`
+  - **Form Data Fields:** `audio` *(file)*, `title` *(string)*, `description` *(string)*, `visibility` (`public` / `private`)
 
-- **`DELETE /api/vns/:id`**: Delete a VoiceNote owned by current user and remove stored audio file.
-  - **Headers:** `Authorization: Bearer <token>`
-  - **Response (200 OK):** `{"success": true, "message": "Voice note deleted successfully"}`
+- **`GET /api/vns/me`**: Retrieve paginated list of VoiceNotes owned by current user.
+  - **Auth:** Required (`protect`)
+
+- **`GET /api/vns/:id`**: Retrieve a single VoiceNote metadata.
+  - **Auth:** Optional (`protectOptional`)
+  - **Access Control:** Public VNs accessible to anyone. Private VNs accessible only to owner (Non-owners receive `403 Forbidden`, guests receive `401 Unauthorized`).
+
+- **`GET /api/vns/:id/stream`**: Stream audio file with HTTP Range support (`bytes=start-end`).
+  - **Auth:** Optional (`protectOptional`)
+  - **Access Control:** Obey centralized access matrix.
+  - **Response:** `200 OK` (full file stream) or `206 Partial Content` (range stream with `Content-Range`, `Content-Length`, `Accept-Ranges: bytes`).
+
+- **`GET /api/vns/:id/download`**: Download complete audio file.
+  - **Auth:** Optional (`protectOptional`)
+  - **Access Control:** Obey centralized access matrix.
+  - **Response (200 OK):** Streams file with `Content-Disposition: attachment; filename="<sanitized_filename>"`.
+
+- **`DELETE /api/vns/:id`**: Delete owned VoiceNote and remove stored audio file.
+  - **Auth:** Required (`protect`)
 
 ---
 
@@ -205,26 +191,24 @@ Authorization: Bearer <token>
 
 ---
 
-## Current Status & Phase 3 Scope
+## Current Status & Phase 4 Scope
 
 > [!NOTE]
-> **Phase 0, Phase 1, Phase 2 & Phase 3 Status: COMPLETE.**
-> Voice Note upload, storage abstraction, audio duration extraction, file/DB consistency, and owner-scoped lifecycle management are fully implemented and verified via 23 automated tests (50 total test cases across all phases).
+> **Phase 0, Phase 1, Phase 2, Phase 3 & Phase 4 Status: COMPLETE.**
+> Access authorization, public discovery feed, HTTP range streaming, controlled downloads, and privacy enforcement across all endpoints are fully implemented and verified via 32 automated tests (82 total test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
-- ❌ Public VN feed
-- ❌ Public/private access authorization rules (Phase 4)
-- ❌ HTTP range-based audio streaming (`GET /api/vns/:id/stream`)
-- ❌ Audio download API (`GET /api/vns/:id/download`)
 - ❌ Likes API endpoints (`POST /api/vns/:id/like`)
 - ❌ Albums API & item reordering
-- ❌ Search & recommendations
-- ❌ Mobile offline playback & social features
+- ❌ Search & user feed algorithms
+- ❌ Comments & social features
+- ❌ React Native / Mobile offline playback manager
+- ❌ Listening / Download history analytics
 
 ---
 
 ## Future Roadmap
 
-1. **Phase 4 — Authorization, Public Feeds & Audio Streaming:** Public/private visibility authorization, public discovery feeds, audio streaming endpoint, and download handlers.
-2. **Phase 5 — Social Features & Albums:** Likes API, Album CRUD, AlbumItem ordering endpoints.
+1. **Phase 5 — Social Features & Albums:** Likes API, Album CRUD, AlbumItem ordering endpoints, follower feeds.
+
 

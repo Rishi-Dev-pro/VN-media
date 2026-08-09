@@ -66,6 +66,31 @@ class StorageService {
     if (!storageRef) return false;
     return this.provider.fileExists(storageRef);
   }
+
+  /**
+   * Create a readable stream for a stored file.
+   * @param {string} storageRef - Relative storage reference
+   * @param {object} [options] - Stream options (e.g. { start, end })
+   * @returns {ReadableStream} Node.js stream
+   */
+  createReadStream(storageRef, options) {
+    if (!storageRef) {
+      throw new Error('Storage reference is required to create a read stream.');
+    }
+    return this.provider.createReadStream(storageRef, options);
+  }
+
+  /**
+   * Get file stats (e.g., size).
+   * @param {string} storageRef - Relative storage reference
+   * @returns {Promise<{ size: number }>}
+   */
+  async getFileStats(storageRef) {
+    if (!storageRef) {
+      throw new Error('Storage reference is required to get file stats.');
+    }
+    return this.provider.getFileStats(storageRef);
+  }
 }
 
 // Export singleton instance by default, allow class instantiation if needed

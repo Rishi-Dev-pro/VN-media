@@ -45,6 +45,48 @@ const protect = async (req, res, next) => {
   }
 };
 
+/**
+ * Optional authentication middleware.
+ * Attaches req.user if a valid JWT Bearer header is present,
+ * but allows unauthenticated requests to proceed with req.user = null.
+ */
+const protectOptional = async (req, res, next) => {
+  try {
+    req.user = null;
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return next();
+    }
+
+    let decoded;
+    try {
+      decoded = verifyToken(token);
+    } catch {
+      return next();
+    }
+
+    if (!decoded || !decoded.sub) {
+      return next();
+    }
+
+    const user = await User.findById(decoded.sub);
+    if (user) {
+      req.user = user;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   protect,
+  protectOptional,
 };

@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const StorageProvider = require('./StorageProvider');
 
@@ -88,6 +89,31 @@ class LocalStorageProvider extends StorageProvider {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Create a readable stream for a stored file on local disk.
+   * @param {string} storageRef - Relative storage reference
+   * @param {object} [options] - Stream options (e.g. { start, end })
+   * @returns {fs.ReadStream} Node.js fs.ReadStream
+   */
+  createReadStream(storageRef, options) {
+    const safePath = this._getSafePath(storageRef);
+    return fsSync.createReadStream(safePath, options);
+  }
+
+  /**
+   * Get stats for a stored file on local disk.
+   * @param {string} storageRef - Relative storage reference
+   * @returns {Promise<{ size: number }>} File stats
+   */
+  async getFileStats(storageRef) {
+    const safePath = this._getSafePath(storageRef);
+    const stats = await fs.stat(safePath);
+    return {
+      size: stats.size,
+      mtime: stats.mtime,
+    };
   }
 }
 
