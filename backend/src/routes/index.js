@@ -5,6 +5,7 @@ const userRoutes = require('./user.routes');
 const voiceNoteRoutes = require('./voiceNote.routes');
 const albumRoutes = require('./album.routes');
 const activityEventRoutes = require('./activityEvent.routes');
+const notificationRoutes = require('./notification.routes');
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ router.use('/users', userRoutes);
 router.use('/vns', voiceNoteRoutes);
 router.use('/albums', albumRoutes);
 router.use('/activity', activityEventRoutes);
+router.use('/notifications', notificationRoutes);
 
 module.exports = router;

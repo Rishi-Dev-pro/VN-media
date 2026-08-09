@@ -48,6 +48,14 @@ class ActivityEventService {
       metadata: typeof metadata === 'object' && metadata !== null ? metadata : {},
     });
 
+    // Trigger Notification consumer
+    try {
+      const notificationService = require('./notification.service');
+      await notificationService.createNotificationFromActivityEvent(event);
+    } catch (err) {
+      console.error('[Notification Consumer Error]', err);
+    }
+
     return event;
   }
 
