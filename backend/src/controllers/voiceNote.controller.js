@@ -15,6 +15,7 @@ const formatVoiceNote = (vn) => {
     audioUrl: vn.audioUrl,
     duration: vn.duration,
     visibility: vn.visibility,
+    tags: vn.tags || [],
     createdAt: vn.createdAt,
     updatedAt: vn.updatedAt,
   };
@@ -43,6 +44,7 @@ const uploadVoiceNote = async (req, res, next) => {
       title: req.body?.title,
       description: req.body?.description,
       visibility: req.body?.visibility,
+      tags: req.body?.tags,
     });
 
     return sendSuccess(
@@ -51,6 +53,71 @@ const uploadVoiceNote = async (req, res, next) => {
       { voiceNote: formatVoiceNote(voiceNote) },
       201
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update metadata of an existing VoiceNote owned by authenticated user.
+ * PATCH /api/vns/:id
+ */
+const updateVoiceNote = async (req, res, next) => {
+  try {
+    const voiceNote = await voiceNoteService.updateVoiceNoteMetadata({
+      voiceNoteId: req.params.id,
+      user: req.user,
+      title: req.body?.title,
+      description: req.body?.description,
+      visibility: req.body?.visibility,
+      tags: req.body?.tags,
+    });
+
+    return sendSuccess(res, 'Voice note updated successfully', {
+      voiceNote: formatVoiceNote(voiceNote),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Search public VoiceNotes by title, description, or tags.
+ * GET /api/vns/search
+ */
+const searchVoiceNotes = async (req, res, next) => {
+  try {
+    const { voiceNotes, pagination } = await voiceNoteService.searchPublicVoiceNotes({
+      q: req.query.q,
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+
+    return sendSuccess(res, 'Voice note search results retrieved successfully', {
+      items: voiceNotes.map(formatVoiceNote),
+      pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get public VoiceNotes matching a specific normalized tag.
+ * GET /api/vns/tags/:tag
+ */
+const getVoiceNotesByTag = async (req, res, next) => {
+  try {
+    const { voiceNotes, pagination } = await voiceNoteService.getPublicVoiceNotesByTag({
+      tag: req.params.tag,
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+
+    return sendSuccess(res, 'Voice notes by tag retrieved successfully', {
+      items: voiceNotes.map(formatVoiceNote),
+      pagination,
+    });
   } catch (error) {
     next(error);
   }
@@ -214,6 +281,9 @@ const deleteVoiceNote = async (req, res, next) => {
 
 module.exports = {
   uploadVoiceNote,
+  updateVoiceNote,
+  searchVoiceNotes,
+  getVoiceNotesByTag,
   getPublicFeed,
   getOwnerVoiceNotes,
   getVoiceNoteById,

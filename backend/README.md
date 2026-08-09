@@ -63,6 +63,9 @@ This repository contains the backend REST API foundation, database models, and a
 
    # Run Phase 5 Likes & Album Management Tests
    node tests/testPhase5SocialAlbums.js
+
+   # Run Phase 6 Search, Tags & Discovery Tests
+   node tests/testPhase6Search.js
    ```
 
 ---
@@ -95,37 +98,39 @@ npm start
 
 ---
 
-## Storage & Streaming Architecture (Phase 3, Phase 4 & Phase 5)
+## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5 & Phase 6)
 
 The Voice Note storage and streaming foundation utilizes a decoupled **Storage Service Abstraction** pattern:
 
 ```text
 Voice Note Controller / Album Controller / Like Controller
         ↓
-   VoiceNote Service (Centralized Auth & Storage Stream orchestration)
+   VoiceNote Service (Centralized Auth, Search, Tag Normalization & Storage Stream orchestration)
         ↓
    Storage Service (Decoupled abstraction layer)
         ↓
  LocalStorageProvider (Writes & streams from backend/storage/audio/)
 ```
 
-### Access Authorization Matrix (Single Source of Truth)
+### Access & Discovery Authorization Matrix (Single Source of Truth)
+
+> [!IMPORTANT]
+> **Privacy Invariant**: Search and discovery (`GET /feed`, `GET /search`, `GET /tags/:tag`) only discover public VoiceNotes (`visibility = 'public'`). Private VoiceNotes NEVER appear in search results, total counts, pagination, or tag discovery queries.
 
 | Endpoint Request | VoiceNote Visibility | Requester Role | Result | HTTP Status |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET /api/vns/feed` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
 | `GET /api/vns/feed` | `private` | Anyone | DENIED (Excluded from feed) | N/A |
+| `GET /api/vns/search` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
+| `GET /api/vns/search` | `private` | Anyone | DENIED (Excluded from search) | N/A |
+| `GET /api/vns/tags/:tag` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
+| `GET /api/vns/tags/:tag` | `private` | Anyone | DENIED (Excluded from tags) | N/A |
 | `GET /api/vns/:id` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
 | `GET /api/vns/:id` | `private` | Owner | ALLOW | `200 OK` |
 | `GET /api/vns/:id` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
 | `GET /api/vns/:id` | `private` | Unauthenticated Guest | DENIED | `401 Unauthorized` |
-| `POST /api/vns/:id/like` | `public` | Authenticated User / Owner | ALLOW | `200 OK` |
-| `POST /api/vns/:id/like` | `private` | Owner | ALLOW | `200 OK` |
-| `POST /api/vns/:id/like` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
-| `POST /api/vns/:id/like` | Any | Unauthenticated Guest | DENIED | `401 Unauthorized` |
-| `POST /api/albums/:id/items` | `public` | Album Owner | ALLOW | `201 Created` |
-| `POST /api/albums/:id/items` | `private` | Album & VN Owner (Same User) | ALLOW | `201 Created` |
-| `POST /api/albums/:id/items` | `private` | Non-Owner of Private VN | DENIED | `403 Forbidden` |
+| `PATCH /api/vns/:id` | Any | Owner | ALLOW (Metadata/tags update) | `200 OK` |
+| `PATCH /api/vns/:id` | Any | Other Authenticated User | DENIED | `403 Forbidden` |
 
 ---
 
@@ -150,14 +155,17 @@ Authorization: Bearer <token>
 - **`GET /api/users/me`**: Get current authenticated user profile.
 - **`PATCH /api/users/me`**: Update current authenticated user profile (`username`, `avatar`, `bio`).
 
-### 4. Voice Note Management (Phase 3 & Phase 4)
-- **`GET /api/vns/feed`**: Retrieve public discovery feed (`visibility = 'public'`).
-- **`POST /api/vns`**: Upload an audio file and create a VoiceNote.
-- **`GET /api/vns/me`**: Retrieve paginated list of VoiceNotes owned by current user.
-- **`GET /api/vns/:id`**: Retrieve single VoiceNote metadata.
-- **`GET /api/vns/:id/stream`**: Stream audio file with HTTP Range support (`bytes=start-end`).
-- **`GET /api/vns/:id/download`**: Download complete audio file.
-- **`DELETE /api/vns/:id`**: Delete owned VoiceNote and remove stored audio file.
+### 4. Voice Note Management & Discovery (Phase 3, Phase 4 & Phase 6)
+- **`GET /api/vns/feed`**: Retrieve public discovery feed (`visibility = 'public'`). Optional auth.
+- **`GET /api/vns/search`**: Search public VoiceNotes across `title`, `description`, and `tags` (`?q=term&page=1&limit=20`). Empty `q` returns recent public VoiceNotes. Optional auth.
+- **`GET /api/vns/tags/:tag`**: Retrieve public VoiceNotes matching a normalized tag (`?page=1&limit=20`). Optional auth.
+- **`POST /api/vns`**: Upload an audio file and create a VoiceNote (`audio`, `title`, `description`, `visibility`, `tags`). Auth required.
+- **`PATCH /api/vns/:id`**: Update VoiceNote metadata (`title`, `description`, `visibility`, `tags`). Owner only. Auth required.
+- **`GET /api/vns/me`**: Retrieve paginated list of VoiceNotes owned by current user. Auth required.
+- **`GET /api/vns/:id`**: Retrieve single VoiceNote metadata. Optional auth.
+- **`GET /api/vns/:id/stream`**: Stream audio file with HTTP Range support (`bytes=start-end`). Optional auth.
+- **`GET /api/vns/:id/download`**: Download complete audio file. Optional auth.
+- **`DELETE /api/vns/:id`**: Delete owned VoiceNote and remove stored audio file. Auth required.
 
 ### 5. Likes (Phase 5)
 - **`POST /api/vns/:id/like`**: Add a Like for a VoiceNote. Idempotent (`{ liked: true }`). Auth required.
@@ -165,9 +173,6 @@ Authorization: Bearer <token>
 - **`GET /api/vns/:id/likes`**: Get aggregate Like count and `likedByMe` status. Optional auth.
 
 ### 6. Albums & Album Items (Phase 5 - Private Collections)
-> [!IMPORTANT]
-> **Albums are private owner-managed collections.** Public albums and album sharing are intentionally not implemented yet.
-
 - **`POST /api/albums`**: Create a new Album (`title`, `description`, `coverImage`). Auth required.
 - **`GET /api/albums`**: Retrieve paginated list of Albums owned by current user. Auth required.
 - **`GET /api/albums/:id`**: Retrieve single Album owned by user with items sorted by `position ASC`. Auth required.
@@ -179,35 +184,36 @@ Authorization: Bearer <token>
 
 ---
 
-## Data Models (Phase 1)
+## Data Models (Phase 1 & Phase 6)
 
 - **`User`** (`src/models/User.js`): Accounts (`username`, `email`, `passwordHash`, `avatar`, `bio`, `timestamps`).
-- **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `audioUrl`, `duration`, `visibility`, `timestamps`).
+- **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `tags`, `audioUrl`, `duration`, `visibility`, `timestamps`).
 - **`Like`** (`src/models/Like.js`): Likes join schema (`userId`, `voiceNoteId`, `createdAt`).
 - **`Album`** (`src/models/Album.js`): Albums (`ownerId`, `title`, `description`, `coverImage`, `timestamps`).
 - **`AlbumItem`** (`src/models/AlbumItem.js`): Album items join schema (`albumId`, `voiceNoteId`, `position`, `createdAt`).
 
 ---
 
-## Current Status & Phase 5 Scope
+## Current Status & Phase 6 Scope
 
 > [!NOTE]
-> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4 & Phase 5 Status: COMPLETE.**
-> Likes, aggregate counts, private owner-managed albums, item position auto-assignment, two-phase atomic reordering, data cleanup, and privacy enforcement across all endpoints are fully implemented and verified via 43 automated tests (135 total test cases across all phases).
+> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5 & Phase 6 Status: COMPLETE.**
+> Deterministic search, tag normalization, tag discovery, owner-only metadata updates, strict database-level privacy isolation, and regression safety are fully implemented and verified via 35 automated tests (170 total test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
+- ❌ Social follower network & following feeds
 - ❌ Public albums and album sharing
-- ❌ Search & user feed algorithms
-- ❌ Comments & social follower networks
-- ❌ Notifications & recommendations
-- ❌ React Native / Mobile offline playback manager
-- ❌ Play history & download analytics
+- ❌ User activity feeds
+- ❌ Comments & notifications
+- ❌ Recommendation algorithms
+- ❌ Listening & download history analytics
 
 ---
 
 ## Future Roadmap
 
-1. **Phase 6 — Search, Playlists & Social Discovery:** Text search, tag discovery, public albums, user feeds, and follower interactions.
+1. **Phase 7 — Social Network & User Feeds:** Follower interactions, following feeds, user activity feeds, and social notifications.
+
 
 
 

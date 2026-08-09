@@ -40,6 +40,11 @@ const voiceNoteSchema = new mongoose.Schema(
       required: [true, 'Visibility is required'],
       index: true,
     },
+    tags: {
+      type: [String],
+      default: [],
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -51,6 +56,9 @@ voiceNoteSchema.index({ ownerId: 1, createdAt: -1 });
 
 // Index for chronological public feeds
 voiceNoteSchema.index({ visibility: 1, createdAt: -1 });
+
+// Multikey compound index for public tag discovery queries
+voiceNoteSchema.index({ visibility: 1, tags: 1, createdAt: -1 });
 
 const VoiceNote = mongoose.model('VoiceNote', voiceNoteSchema);
 

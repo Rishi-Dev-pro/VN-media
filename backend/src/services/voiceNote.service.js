@@ -12,6 +12,11 @@ const EXT_TO_MIME = {
   '.ogg': 'audio/ogg',
 };
 
+// Search & Tag Validation Constants
+const MAX_TAGS_PER_VOICE_NOTE = 10;
+const MAX_TAG_LENGTH = 30;
+const MAX_SEARCH_QUERY_LENGTH = 100;
+
 class VoiceNoteService {
   /**
    * Centralized access-control authority for VoiceNote authorization.
@@ -63,10 +68,69 @@ class VoiceNoteService {
   }
 
   /**
+   * Parse, normalize, and validate input tags.
+   * Rules: trim, lowercase, collapse whitespace, deduplicate, max 10 tags, max 30 chars per tag.
+   * @private
+   */
+  _normalizeAndValidateTags(inputTags) {
+    if (inputTags === undefined || inputTags === null) {
+      return [];
+    }
+
+    let rawList = [];
+    if (typeof inputTags === 'string') {
+      const trimmed = inputTags.trim();
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          rawList = JSON.parse(trimmed);
+        } catch {
+          rawList = trimmed.replace(/^\[|\]$/g, '').split(',');
+        }
+      } else if (trimmed.includes(',')) {
+        rawList = trimmed.split(',');
+      } else if (trimmed !== '') {
+        rawList = [trimmed];
+      }
+    } else if (Array.isArray(inputTags)) {
+      rawList = inputTags;
+    }
+
+    if (!Array.isArray(rawList)) {
+      return [];
+    }
+
+    const normalizedList = [];
+
+    for (const rawTag of rawList) {
+      if (typeof rawTag !== 'string') continue;
+      const tagStr = rawTag.trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!tagStr) continue;
+
+      if (tagStr.length > MAX_TAG_LENGTH) {
+        const err = new Error(`Tag length cannot exceed ${MAX_TAG_LENGTH} characters`);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      normalizedList.push(tagStr);
+    }
+
+    const uniqueTags = Array.from(new Set(normalizedList));
+
+    if (uniqueTags.length > MAX_TAGS_PER_VOICE_NOTE) {
+      const err = new Error(`Cannot exceed ${MAX_TAGS_PER_VOICE_NOTE} tags per voice note`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return uniqueTags;
+  }
+
+  /**
    * Create a new VoiceNote document after saving audio file and extracting metadata.
    * Ensures file/database consistency with rollback on error.
    */
-  async createVoiceNote({ user, file, title, description, visibility }) {
+  async createVoiceNote({ user, file, title, description, visibility, tags }) {
     if (!user || !user._id) {
       const err = new Error('Authentication required');
       err.statusCode = 401;
@@ -104,6 +168,8 @@ class VoiceNoteService {
       throw err;
     }
 
+    const normalizedTags = this._normalizeAndValidateTags(tags);
+
     // 1. Validate audio format, magic bytes, and extract real duration
     const { extension, duration } = await audioService.validateAndExtractMetadata(
       file.buffer,
@@ -123,6 +189,7 @@ class VoiceNoteService {
         audioUrl: storageRef,
         duration,
         visibility: validVisibility,
+        tags: normalizedTags,
       });
 
       return voiceNote;
@@ -131,6 +198,166 @@ class VoiceNoteService {
       await storageService.deleteFile(storageRef);
       throw dbError;
     }
+  }
+
+  /**
+   * Update metadata of an existing VoiceNote owned by authenticated user.
+   */
+  async updateVoiceNoteMetadata({ voiceNoteId, user, title, description, visibility, tags }) {
+    if (!user || !user._id) {
+      const err = new Error('Authentication required');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    const voiceNote = await VoiceNote.findById(voiceNoteId);
+    if (!voiceNote) {
+      const err = new Error('Voice note not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const ownerIdStr = voiceNote.ownerId && voiceNote.ownerId._id
+      ? voiceNote.ownerId._id.toString()
+      : voiceNote.ownerId
+      ? voiceNote.ownerId.toString()
+      : '';
+
+    if (ownerIdStr !== user._id.toString()) {
+      const err = new Error('Access denied: You do not have permission to update this voice note');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    if (title !== undefined) {
+      if (!title || typeof title !== 'string' || !title.trim()) {
+        const err = new Error('Title cannot be empty');
+        err.statusCode = 400;
+        throw err;
+      }
+      if (title.trim().length > 100) {
+        const err = new Error('Title cannot exceed 100 characters');
+        err.statusCode = 400;
+        throw err;
+      }
+      voiceNote.title = title.trim();
+    }
+
+    if (description !== undefined) {
+      if (description && description.trim().length > 1000) {
+        const err = new Error('Description cannot exceed 1000 characters');
+        err.statusCode = 400;
+        throw err;
+      }
+      voiceNote.description = description ? description.trim() : '';
+    }
+
+    if (visibility !== undefined) {
+      if (!['public', 'private'].includes(visibility)) {
+        const err = new Error('Visibility must be either public or private');
+        err.statusCode = 400;
+        throw err;
+      }
+      voiceNote.visibility = visibility;
+    }
+
+    if (tags !== undefined) {
+      voiceNote.tags = this._normalizeAndValidateTags(tags);
+    }
+
+    await voiceNote.save();
+    return voiceNote;
+  }
+
+  /**
+   * Search public VoiceNotes across title, description, and tags.
+   * MANDATORY: Strictly queries visibility = 'public'.
+   */
+  async searchPublicVoiceNotes({ q, page = 1, limit = 20 }) {
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const query = { visibility: 'public' };
+
+    if (q && typeof q === 'string' && q.trim()) {
+      const trimmedQ = q.trim();
+      if (trimmedQ.length > MAX_SEARCH_QUERY_LENGTH) {
+        const err = new Error(`Search query cannot exceed ${MAX_SEARCH_QUERY_LENGTH} characters`);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const escapedQ = trimmedQ.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const searchRegex = new RegExp(escapedQ, 'i');
+
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { tags: searchRegex },
+      ];
+    }
+
+    const [voiceNotes, total] = await Promise.all([
+      VoiceNote.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .populate('ownerId', 'username'),
+      VoiceNote.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / parsedLimit) || 0;
+
+    return {
+      voiceNotes,
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  /**
+   * Tag-based discovery for public VoiceNotes matching a normalized tag.
+   * MANDATORY: Strictly queries visibility = 'public'.
+   */
+  async getPublicVoiceNotesByTag({ tag, page = 1, limit = 20 }) {
+    if (!tag || typeof tag !== 'string' || !tag.trim()) {
+      const err = new Error('Tag parameter is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const normalizedTag = tag.trim().toLowerCase().replace(/\s+/g, ' ');
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const query = { visibility: 'public', tags: normalizedTag };
+
+    const [voiceNotes, total] = await Promise.all([
+      VoiceNote.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .populate('ownerId', 'username'),
+      VoiceNote.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / parsedLimit) || 0;
+
+    return {
+      voiceNotes,
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        totalPages,
+      },
+    };
   }
 
   /**
