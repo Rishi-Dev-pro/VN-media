@@ -50,6 +50,13 @@ class NotificationService {
       return null;
     }
 
+    // Check recipient notification preference
+    const notificationPreferenceService = require('./notificationPreference.service');
+    const isEnabled = await notificationPreferenceService.checkPreference(recipientId, type);
+    if (!isEnabled) {
+      return null;
+    }
+
     try {
       const notification = await Notification.create({
         recipientId,
