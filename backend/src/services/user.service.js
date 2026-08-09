@@ -25,9 +25,10 @@ class UserService {
    * Get public profile representation and statistics of a user by username.
    *
    * @param {string} username - Target username
-   * @returns {Promise<{ user: object, stats: { publicVoiceNotes: number } }>}
+   * @param {object|null} [requestingUser=null] - Optional requesting user object
+   * @returns {Promise<{ user: object, stats: { publicVoiceNotes: number, followers: number, following: number }, relationship?: { isFollowing: boolean } }>}
    */
-  static async getPublicProfileByUsername(username) {
+  static async getPublicProfileByUsername(username, requestingUser = null) {
     if (!username || typeof username !== 'string' || !username.trim()) {
       const err = new Error('Username parameter is required');
       err.statusCode = 400;
@@ -43,18 +44,37 @@ class UserService {
       throw err;
     }
 
-    // Privacy Invariant: Count ONLY public VoiceNotes owned by this user
-    const publicVoiceNotes = await VoiceNote.countDocuments({
-      ownerId: user._id,
-      visibility: 'public',
-    });
+    const Follow = require('../models/Follow');
 
-    return {
+    // Privacy Invariant: Count ONLY public VoiceNotes, plus followers and following counts
+    const [publicVoiceNotes, followersCount, followingCount] = await Promise.all([
+      VoiceNote.countDocuments({ ownerId: user._id, visibility: 'public' }),
+      Follow.countDocuments({ followingId: user._id }),
+      Follow.countDocuments({ followerId: user._id }),
+    ]);
+
+    const profileData = {
       user: sanitizePublicUser(user),
       stats: {
         publicVoiceNotes,
+        followers: followersCount,
+        following: followingCount,
       },
     };
+
+    if (requestingUser && requestingUser._id) {
+      if (requestingUser._id.toString() === user._id.toString()) {
+        profileData.relationship = { isFollowing: false };
+      } else {
+        const isFollowing = await Follow.exists({
+          followerId: requestingUser._id,
+          followingId: user._id,
+        });
+        profileData.relationship = { isFollowing: !!isFollowing };
+      }
+    }
+
+    return profileData;
   }
 
   /**

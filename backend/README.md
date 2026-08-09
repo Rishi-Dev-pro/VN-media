@@ -69,6 +69,9 @@ This repository contains the backend REST API foundation, database models, and a
 
    # Run Phase 7 User Profiles & Public Creator Pages Tests
    node tests/testPhase7Profiles.js
+
+   # Run Phase 8 Followers & Following Social Graph Tests
+   node tests/testPhase8Follows.js
    ```
 
 ---
@@ -101,14 +104,14 @@ npm start
 
 ---
 
-## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5, Phase 6 & Phase 7)
+## Storage & Streaming Architecture (Phase 3, Phase 4, Phase 5, Phase 6, Phase 7 & Phase 8)
 
 The Voice Note storage and streaming foundation utilizes a decoupled **Storage Service Abstraction** pattern:
 
 ```text
-User Controller / Voice Note Controller / Album Controller / Like Controller
+User Controller / Follow Controller / Voice Note Controller / Album Controller / Like Controller
         ↓
-   User Service / VoiceNote Service (Centralized Auth, Public Profiles & Stream orchestration)
+   User Service / Follow Service / VoiceNote Service (Centralized Auth, Social Graph & Stream orchestration)
         ↓
    Storage Service (Decoupled abstraction layer)
         ↓
@@ -118,25 +121,16 @@ User Controller / Voice Note Controller / Album Controller / Like Controller
 ### Access & Discovery Authorization Matrix (Single Source of Truth)
 
 > [!IMPORTANT]
-> **Privacy Invariant**: Public profiles (`GET /api/users/:username`) and public creator listings (`GET /api/users/:username/voice-notes`) only expose safe public metadata (`id`, `username`, `avatar`, `bio`, `createdAt`, `publicVoiceNotes` count). `email` and `passwordHash` are **NEVER** exposed. Private VoiceNotes and private Albums NEVER appear in public creator profiles or listings.
+> **Privacy Invariant**: Following a user **DOES NOT** grant access to private VoiceNotes or private Albums. Phase 4 and Phase 5 access controls remain 100% unchanged. Followers (`GET /api/users/:id/followers`) and Following (`GET /api/users/:id/following`) lists expose only safe public user fields (`id`, `username`, `avatar`, `bio`, `createdAt`). `email` and `passwordHash` are **NEVER** exposed.
 
 | Endpoint Request | VoiceNote Visibility | Requester Role | Result | HTTP Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET /api/users/:username` | Any | Anyone (Guest / User / Owner) | ALLOW (Public user profile & stats) | `200 OK` |
-| `GET /api/users/:username/voice-notes` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
-| `GET /api/users/:username/voice-notes` | `private` | Anyone | DENIED (Excluded from creator listing) | N/A |
-| `GET /api/vns/feed` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
-| `GET /api/vns/feed` | `private` | Anyone | DENIED (Excluded from feed) | N/A |
-| `GET /api/vns/search` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
-| `GET /api/vns/search` | `private` | Anyone | DENIED (Excluded from search) | N/A |
-| `GET /api/vns/tags/:tag` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
-| `GET /api/vns/tags/:tag` | `private` | Anyone | DENIED (Excluded from tags) | N/A |
-| `GET /api/vns/:id` | `public` | Anyone (Guest / User / Owner) | ALLOW | `200 OK` |
-| `GET /api/vns/:id` | `private` | Owner | ALLOW | `200 OK` |
-| `GET /api/vns/:id` | `private` | Other Authenticated User | DENIED | `403 Forbidden` |
-| `GET /api/vns/:id` | `private` | Unauthenticated Guest | DENIED | `401 Unauthorized` |
-| `PATCH /api/vns/:id` | Any | Owner | ALLOW (Metadata/tags update) | `200 OK` |
-| `PATCH /api/vns/:id` | Any | Other Authenticated User | DENIED | `403 Forbidden` |
+| `POST /api/users/:id/follow` | Any | Authenticated User | ALLOW (Idempotent follow) | `200 OK` / `201 Created` |
+| `DELETE /api/users/:id/follow` | Any | Authenticated User | ALLOW (Idempotent unfollow) | `200 OK` |
+| `GET /api/users/:id/follow-status` | Any | Authenticated User | ALLOW (`{ following: boolean }`) | `200 OK` |
+| `GET /api/users/:id/followers` | Any | Anyone (Guest / User / Owner) | ALLOW (Paginated public followers) | `200 OK` |
+| `GET /api/users/:id/following` | Any | Anyone (Guest / User / Owner) | ALLOW (Paginated public following) | `200 OK` |
+| `GET /api/users/:username` | Any | Anyone (Guest / User / Owner) | ALLOW (Public profile, stats & relationship) | `200 OK` |
 
 ---
 
@@ -160,10 +154,17 @@ Authorization: Bearer <token>
 ### 3. User Management & Public Profiles (Phase 2 & Phase 7)
 - **`GET /api/users/me`**: Get current authenticated user profile (includes `email`). Auth required.
 - **`PATCH /api/users/me`**: Update current authenticated user profile (`username`, `avatar`, `bio`). Username changes preserve immutable `_id` relationships. Auth required.
-- **`GET /api/users/:username`**: Retrieve public user profile metadata and statistics (`stats: { publicVoiceNotes }`). Strips `email` and `passwordHash`. Public / Unauthenticated.
+- **`GET /api/users/:username`**: Retrieve public user profile metadata and statistics (`stats: { publicVoiceNotes, followers, following }`). Strips `email` and `passwordHash`. Public / Unauthenticated.
 - **`GET /api/users/:username/voice-notes`**: Retrieve paginated list of public VoiceNotes owned by creator (`?page=1&limit=20`). Strictly excludes private VoiceNotes. Public / Unauthenticated.
 
-### 4. Voice Note Management & Discovery (Phase 3, Phase 4 & Phase 6)
+### 4. Followers & Following Social Graph (Phase 8)
+- **`POST /api/users/:id/follow`**: Follow a user. Idempotent (`{ following: true }`). Rejects self-follow (`400 Bad Request`). Auth required.
+- **`DELETE /api/users/:id/follow`**: Unfollow a user. Idempotent (`{ following: false }`). Auth required.
+- **`GET /api/users/:id/follow-status`**: Check if authenticated user follows target user (`{ following: boolean }`). Auth required.
+- **`GET /api/users/:id/followers`**: Retrieve paginated list of users following target user (`?page=1&limit=20`). Accepts User ID or username. Public / Unauthenticated.
+- **`GET /api/users/:id/following`**: Retrieve paginated list of users followed by target user (`?page=1&limit=20`). Accepts User ID or username. Public / Unauthenticated.
+
+### 5. Voice Note Management & Discovery (Phase 3, Phase 4 & Phase 6)
 - **`GET /api/vns/feed`**: Retrieve public discovery feed (`visibility = 'public'`). Optional auth.
 - **`GET /api/vns/search`**: Search public VoiceNotes across `title`, `description`, and `tags` (`?q=term&page=1&limit=20`). Empty `q` returns recent public VoiceNotes. Optional auth.
 - **`GET /api/vns/tags/:tag`**: Retrieve public VoiceNotes matching a normalized tag (`?page=1&limit=20`). Optional auth.
@@ -175,15 +176,12 @@ Authorization: Bearer <token>
 - **`GET /api/vns/:id/download`**: Download complete audio file. Optional auth.
 - **`DELETE /api/vns/:id`**: Delete owned VoiceNote and remove stored audio file. Auth required.
 
-### 5. Likes (Phase 5)
+### 6. Likes (Phase 5)
 - **`POST /api/vns/:id/like`**: Add a Like for a VoiceNote. Idempotent (`{ liked: true }`). Auth required.
 - **`DELETE /api/vns/:id/like`**: Remove a Like for a VoiceNote. Idempotent (`{ liked: false }`). Auth required.
 - **`GET /api/vns/:id/likes`**: Get aggregate Like count and `likedByMe` status. Optional auth.
 
-### 6. Albums & Album Items (Phase 5 - Private Collections)
-> [!IMPORTANT]
-> **Albums are private owner-managed collections.** Public albums and album sharing are intentionally not implemented yet.
-
+### 7. Albums & Album Items (Phase 5 - Private Collections)
 - **`POST /api/albums`**: Create a new Album (`title`, `description`, `coverImage`). Auth required.
 - **`GET /api/albums`**: Retrieve paginated list of Albums owned by current user. Auth required.
 - **`GET /api/albums/:id`**: Retrieve single Album owned by user with items sorted by `position ASC`. Auth required.
@@ -195,24 +193,25 @@ Authorization: Bearer <token>
 
 ---
 
-## Data Models (Phase 1, Phase 6 & Phase 7)
+## Data Models (Phase 1, Phase 6, Phase 7 & Phase 8)
 
 - **`User`** (`src/models/User.js`): Accounts (`username`, `email`, `passwordHash`, `avatar`, `bio`, `timestamps`).
 - **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `tags`, `audioUrl`, `duration`, `visibility`, `timestamps`).
 - **`Like`** (`src/models/Like.js`): Likes join schema (`userId`, `voiceNoteId`, `createdAt`).
 - **`Album`** (`src/models/Album.js`): Albums (`ownerId`, `title`, `description`, `coverImage`, `timestamps`).
 - **`AlbumItem`** (`src/models/AlbumItem.js`): Album items join schema (`albumId`, `voiceNoteId`, `position`, `createdAt`).
+- **`Follow`** (`src/models/Follow.js`): Follow social graph (`followerId`, `followingId`, `createdAt`). Database unique index `{ followerId: 1, followingId: 1 }`.
 
 ---
 
-## Current Status & Phase 7 Scope
+## Current Status & Phase 8 Scope
 
 > [!NOTE]
-> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6 & Phase 7 Status: COMPLETE.**
-> Public user profiles, public creator VoiceNote listings, credential privacy, username change relationship preservation, index optimization, and regression safety are fully implemented and verified via 42 automated tests (212 total test cases across all phases).
+> **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7 & Phase 8 Status: COMPLETE.**
+> Social graph follow/unfollow relationships, follow status checks, public followers/following lists, database-level unique constraints, self-follow prevention, username change relationship preservation, and regression safety are fully implemented and verified via 52 automated tests (264 total test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
-- ❌ Followers, following, and follow/unfollow actions
+- ❌ Following activity feed & social notifications
 - ❌ Public albums and album sharing
 - ❌ User activity feeds
 - ❌ Comments & notifications
@@ -223,7 +222,8 @@ Authorization: Bearer <token>
 
 ## Future Roadmap
 
-1. **Phase 8 — Social Network & User Feeds:** Follower interactions, following feeds, user activity feeds, and social notifications.
+1. **Phase 9 — Social Activity Feed & Notifications:** Following activity feed, user activity notifications, and social discovery recommendations.
+
 
 
 

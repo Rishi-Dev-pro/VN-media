@@ -36,8 +36,8 @@ const updateMe = async (req, res, next) => {
  */
 const getPublicProfile = async (req, res, next) => {
   try {
-    const { user, stats } = await UserService.getPublicProfileByUsername(req.params.username);
-    return sendSuccess(res, 'Public user profile retrieved successfully', { user, stats }, 200);
+    const profileData = await UserService.getPublicProfileByUsername(req.params.username, req.user);
+    return sendSuccess(res, 'Public user profile retrieved successfully', profileData, 200);
   } catch (error) {
     next(error);
   }
