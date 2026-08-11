@@ -1,10 +1,10 @@
 import { Heart, Play } from 'lucide-react';
-import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../components/common/Avatar';
 import { Equalizer } from '../../components/common/Equalizer';
 import { mockCreators } from '../../data/mockCreators';
 import { voiceNotesById } from '../../data/mockVoiceNotes';
+import { useParallax } from '../../hooks/useParallax';
 import { formatCount, formatTime } from '../../utils/format';
 import type { CSSProperties } from 'react';
 
@@ -20,32 +20,7 @@ const track = voiceNotesById['vn-midnight-frequency'];
 const delay = (d: string) => ({ '--d': d } as CSSProperties);
 
 export default function LandingHero() {
-  const heroRef = useRef<HTMLElement>(null);
-
-  /* Subtle cursor-responsive parallax on the hero media object. */
-  useEffect(() => {
-    const el = heroRef.current;
-    if (!el) return;
-    if (window.matchMedia('(pointer: coarse)').matches) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    let raf = 0;
-    const onMove = (e: PointerEvent) => {
-      const r = el.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - 0.5;
-      const y = (e.clientY - r.top) / r.height - 0.5;
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        el.style.setProperty('--mx', `${(x * 16).toFixed(2)}px`);
-        el.style.setProperty('--my', `${(y * 12).toFixed(2)}px`);
-      });
-    };
-    el.addEventListener('pointermove', onMove);
-    return () => {
-      el.removeEventListener('pointermove', onMove);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
+  const heroRef = useParallax<HTMLElement>();
 
   return (
     <section ref={heroRef} className="land-hero" aria-label="VN-Media introduction">

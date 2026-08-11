@@ -147,6 +147,12 @@ h4 {
   font-variant-numeric: tabular-nums;
 }
 
+/* outlined display text used by hero headlines */
+.text-ghost {
+  color: transparent;
+  -webkit-text-stroke: 1.4px rgba(244, 244, 246, 0.5);
+}
+
 .micro {
   font-size: var(--fs-xs);
   letter-spacing: var(--ls-wide);
@@ -257,6 +263,38 @@ h4 {
 /* ============================================================
    PAGE TRANSITION
    ============================================================ */
+
+/* ============================================================
+   SHARED ENTRANCE ANIMATION (landing + auth)
+   ============================================================ */
+
+@keyframes land-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.land-rise {
+  animation: land-rise 0.72s var(--ease-out) backwards;
+  animation-delay: var(--d, 0s);
+}
+
+@keyframes hero-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -9px;
+  }
+}
 
 @keyframes art-swap {
   from {

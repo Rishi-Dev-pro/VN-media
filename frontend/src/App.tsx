@@ -3,7 +3,8 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AppLayout from './layouts/AppLayout';
 import DiscoverPage from './pages/DiscoverPage';
 import PlaceholderPage from './pages/PlaceholderPage';
-import AuthPage from './pages/AuthPage';
+import AuthPlaceholder from './pages/AuthPlaceholder';
+import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/landing/LandingPage';
 import { PlayerProvider } from './state/PlayerContext';
 import type { View } from './types/navigation';
@@ -45,8 +46,8 @@ export default function App() {
         </Route>
 
         <Route path="/home" element={<Navigate to="/" replace />} />
-        <Route path="/login" element={<AuthPage mode="login" />} />
-        <Route path="/register" element={<AuthPage mode="register" />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<AuthPlaceholder />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </PlayerProvider>
