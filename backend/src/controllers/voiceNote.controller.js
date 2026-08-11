@@ -1,4 +1,5 @@
 const voiceNoteService = require('../services/voiceNote.service');
+const engagementService = require('../services/engagement.service');
 const storageService = require('../services/storage.service');
 const { sendSuccess } = require('../utils/response');
 
@@ -113,8 +114,11 @@ const searchVoiceNotes = async (req, res, next) => {
       limit: req.query.limit,
     });
 
+    const formatted = voiceNotes.map(formatVoiceNote);
+    const enriched = await engagementService.enrichVoiceNotesWithEngagement(formatted, req.user);
+
     return sendSuccess(res, 'Voice note search results retrieved successfully', {
-      items: voiceNotes.map(formatVoiceNote),
+      items: enriched,
       pagination,
     });
   } catch (error) {
@@ -134,8 +138,11 @@ const getVoiceNotesByTag = async (req, res, next) => {
       limit: req.query.limit,
     });
 
+    const formatted = voiceNotes.map(formatVoiceNote);
+    const enriched = await engagementService.enrichVoiceNotesWithEngagement(formatted, req.user);
+
     return sendSuccess(res, 'Voice notes by tag retrieved successfully', {
-      items: voiceNotes.map(formatVoiceNote),
+      items: enriched,
       pagination,
     });
   } catch (error) {
@@ -154,8 +161,11 @@ const getPublicFeed = async (req, res, next) => {
       limit: req.query.limit,
     });
 
+    const formatted = voiceNotes.map(formatVoiceNote);
+    const enriched = await engagementService.enrichVoiceNotesWithEngagement(formatted, req.user);
+
     return sendSuccess(res, 'Public feed retrieved successfully', {
-      voiceNotes: voiceNotes.map(formatVoiceNote),
+      voiceNotes: enriched,
       pagination,
     });
   } catch (error) {
@@ -175,8 +185,11 @@ const getFollowingFeed = async (req, res, next) => {
       limit: req.query.limit,
     });
 
+    const formatted = voiceNotes.map(formatVoiceNote);
+    const enriched = await engagementService.enrichVoiceNotesWithEngagement(formatted, req.user);
+
     return sendSuccess(res, 'Following feed retrieved successfully', {
-      items: voiceNotes.map(formatVoiceNote),
+      items: enriched,
       pagination,
     });
   } catch (error) {
@@ -196,8 +209,11 @@ const getOwnerVoiceNotes = async (req, res, next) => {
       limit: req.query.limit,
     });
 
+    const formatted = voiceNotes.map(formatVoiceNote);
+    const enriched = await engagementService.enrichVoiceNotesWithEngagement(formatted, req.user);
+
     return sendSuccess(res, 'Voice notes retrieved successfully', {
-      voiceNotes: voiceNotes.map(formatVoiceNote),
+      voiceNotes: enriched,
       pagination,
     });
   } catch (error) {
@@ -216,8 +232,11 @@ const getVoiceNoteById = async (req, res, next) => {
       user: req.user,
     });
 
+    const formatted = formatVoiceNote(voiceNote);
+    const enriched = await engagementService.enrichSingleVoiceNoteWithEngagement(formatted, req.user);
+
     return sendSuccess(res, 'Voice note retrieved successfully', {
-      voiceNote: formatVoiceNote(voiceNote),
+      voiceNote: enriched,
     });
   } catch (error) {
     next(error);

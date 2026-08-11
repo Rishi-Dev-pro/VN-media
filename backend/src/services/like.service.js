@@ -35,7 +35,8 @@ class LikeService {
 
     const existingLike = await Like.findOne({ userId: user._id, voiceNoteId });
     if (existingLike) {
-      return { liked: true };
+      const likeCount = await Like.countDocuments({ voiceNoteId });
+      return { liked: true, likeCount };
     }
 
     try {
@@ -56,12 +57,14 @@ class LikeService {
     } catch (err) {
       if (err.code === 11000) {
         // Handle concurrent duplicate key race condition gracefully
-        return { liked: true };
+        const likeCount = await Like.countDocuments({ voiceNoteId });
+        return { liked: true, likeCount };
       }
       throw err;
     }
 
-    return { liked: true };
+    const likeCount = await Like.countDocuments({ voiceNoteId });
+    return { liked: true, likeCount };
   }
 
   /**
@@ -95,7 +98,8 @@ class LikeService {
     }
 
     await Like.findOneAndDelete({ userId: user._id, voiceNoteId });
-    return { liked: false };
+    const likeCount = await Like.countDocuments({ voiceNoteId });
+    return { liked: false, likeCount };
   }
 
   /**

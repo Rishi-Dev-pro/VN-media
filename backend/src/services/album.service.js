@@ -164,9 +164,25 @@ class AlbumService {
         voiceNote: formatVoiceNote(item.voiceNoteId),
       }));
 
+    // Enrich album VoiceNotes with engagement metadata (batched, N+1-free)
+    const engagementService = require('./engagement.service');
+    const requestingUser = user || null;
+    const voiceNoteObjects = items.map((item) => item.voiceNote).filter(Boolean);
+    const enrichedVoiceNotes = await engagementService.enrichVoiceNotesWithEngagement(voiceNoteObjects, requestingUser);
+
+    // Map enriched VoiceNotes back to items
+    const enrichedVnMap = {};
+    for (const evn of enrichedVoiceNotes) {
+      enrichedVnMap[evn.id] = evn;
+    }
+    const enrichedItems = items.map((item) => ({
+      ...item,
+      voiceNote: enrichedVnMap[item.voiceNote.id] || item.voiceNote,
+    }));
+
     return {
       album,
-      items,
+      items: enrichedItems,
     };
   }
 

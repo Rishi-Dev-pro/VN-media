@@ -1,5 +1,6 @@
 const { sanitizeUser } = require('../services/auth.service');
 const { UserService } = require('../services/user.service');
+const engagementService = require('../services/engagement.service');
 const { formatVoiceNote } = require('./voiceNote.controller');
 const { sendSuccess } = require('../utils/response');
 
@@ -55,8 +56,11 @@ const getPublicUserVoiceNotes = async (req, res, next) => {
       limit: req.query.limit,
     });
 
+    const formatted = voiceNotes.map(formatVoiceNote);
+    const enriched = await engagementService.enrichVoiceNotesWithEngagement(formatted, req.user);
+
     return sendSuccess(res, 'Public creator voice notes retrieved successfully', {
-      voiceNotes: voiceNotes.map(formatVoiceNote),
+      voiceNotes: enriched,
       pagination,
     }, 200);
   } catch (error) {
