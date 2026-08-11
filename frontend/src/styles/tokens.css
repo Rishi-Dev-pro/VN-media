@@ -1,0 +1,72 @@
+/* ============================================================
+   VN-MEDIA — DESIGN TOKENS
+   Cinematic · Dark · Premium · Editorial
+   ============================================================ */
+
+:root {
+  /* ---------- Color ---------- */
+  --bg-0: #0a0a0c;            /* page ground, near-black      */
+  --bg-1: #0e0e11;            /* deep graphite                */
+  --surface: rgba(22, 22, 27, 0.88);   /* app surface        */
+  --surface-solid: #16161b;
+  --surface-2: #1b1b21;       /* cards                        */
+  --surface-3: #23232b;       /* raised / hover               */
+  --surface-4: #2c2c36;       /* active pill                  */
+
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.13);
+
+  --text: #f4f4f6;            /* soft white                   */
+  --text-2: #a2a2ab;          /* muted gray                   */
+  --text-3: #6e6e78;          /* faint                        */
+
+  --accent: #9fd4e8;          /* pale ice blue                */
+  --accent-strong: #cdeef9;
+  --accent-dim: rgba(159, 212, 232, 0.14);
+  --accent-glow: rgba(159, 212, 232, 0.32);
+  --violet: #b3a6f2;          /* restrained violet           */
+  --violet-dim: rgba(179, 166, 242, 0.12);
+  --pink: #f56ea0;            /* notification                 */
+  --ok: #7ee2b8;
+
+  /* ---------- Type ---------- */
+  --font-display: 'Space Grotesk Variable', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --fs-hero: clamp(2.1rem, 4.5vw, 3.4rem);
+  --fs-h2: clamp(1.3rem, 2vw, 1.65rem);
+  --fs-h3: 1.04rem;
+  --fs-body: 0.9375rem;
+  --fs-sm: 0.8125rem;
+  --fs-xs: 0.6875rem;
+
+  --ls-wide: 0.18em;
+  --ls-med: 0.08em;
+
+  /* ---------- Shape ---------- */
+  --r-xl: 30px;
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-sm: 10px;
+  --r-pill: 999px;
+
+  /* ---------- Depth ---------- */
+  --shadow-frame: 0 60px 140px -40px rgba(0, 0, 0, 0.9), 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 24px 50px -20px rgba(0, 0, 0, 0.75);
+  --shadow-float: 0 14px 34px -14px rgba(0, 0, 0, 0.7);
+  --shadow-pill: 0 10px 26px -10px rgba(0, 0, 0, 0.65);
+  --shadow-accent: 0 10px 30px -10px rgba(159, 212, 232, 0.45);
+
+  /* ---------- Motion ---------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 160ms;
+  --dur-med: 320ms;
+  --dur-slow: 560ms;
+
+  /* ---------- Breakpoints ---------- */
+  --bp-mobile: 767px;
+  --bp-tablet: 768px;
+  --bp-desktop: 1024px;
+  --bp-wide: 1440px;
+}

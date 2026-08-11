@@ -1,0 +1,60 @@
+.shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+}
+
+/* ---------- floating app surface ---------- */
+
+.app-frame {
+  position: relative;
+  width: calc(100vw - 20px);
+  margin: 10px auto 0;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(26, 26, 31, 0.92) 0%, rgba(15, 15, 19, 0.94) 100%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-frame), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(26px) saturate(1.1);
+  -webkit-backdrop-filter: blur(26px) saturate(1.1);
+}
+
+.app-frame__header {
+  position: relative;
+}
+
+.app-frame__main {
+  padding: 6px 16px 150px;
+}
+
+@media (min-width: 768px) {
+  .app-frame {
+    width: calc(100vw - 32px);
+    margin: 12px auto 0;
+    border-radius: 28px;
+  }
+
+  .app-frame__main {
+    padding: 10px 24px 132px;
+  }
+}
+
+/* ---------- desktop: side rail + straddling nav ---------- */
+
+@media (min-width: 1024px) {
+  .app-frame {
+    width: auto;
+    margin: 56px 24px 40px 88px;
+    border-radius: 30px;
+  }
+
+  .app-frame__main {
+    padding: 10px 30px 40px;
+  }
+}
+
+@media (min-width: 1368px) {
+  .app-frame {
+    width: min(1240px, calc(100vw - 48px));
+    margin-inline: auto;
+  }
+}

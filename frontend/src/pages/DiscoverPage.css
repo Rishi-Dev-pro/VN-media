@@ -1,0 +1,254 @@
+.discover {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'featured'
+    'player'
+    'tags'
+    'recent'
+    'trending';
+  gap: 34px;
+  align-items: start;
+}
+
+.featured-sec {
+  grid-area: featured;
+}
+
+.player-sec {
+  grid-area: player;
+}
+
+.tags-sec {
+  grid-area: tags;
+}
+
+.recent-sec {
+  grid-area: recent;
+}
+
+.trending-sec {
+  grid-area: trending;
+}
+
+/* ---------- section headers ---------- */
+
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.section-head__title {
+  font-size: var(--fs-h2);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.section-head__sub {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+.section-head__meta {
+  color: var(--text-3);
+  padding-bottom: 4px;
+}
+
+.text-link {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-2);
+  letter-spacing: 0.01em;
+  padding: 6px 8px;
+  border-radius: var(--r-pill);
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+
+.text-link:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ---------- featured stack ---------- */
+
+.featured-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- tags ---------- */
+
+.tags-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+/* ---------- recently played ---------- */
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ---------- trending strip ---------- */
+
+.trending-strip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.trending-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  transition:
+    background var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    transform var(--dur-fast) ease;
+}
+
+.trending-chip:hover {
+  background: var(--surface-3);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.trending-chip img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.trending-chip__title {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* ---------- skeletons ---------- */
+
+.featured-card--skeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
+.featured-card--skeleton:hover {
+  transform: rotate(var(--card-rot));
+  box-shadow: var(--shadow-card);
+}
+
+.featured-card__sk-art {
+  aspect-ratio: 4 / 3;
+  border-radius: 16px 16px 12px 12px;
+}
+
+.featured-card__sk-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 6px 0;
+}
+
+.featured-card__sk-line {
+  height: 14px;
+  border-radius: 6px;
+}
+
+.track-row--skeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
+.track-row--skeleton:hover {
+  background: transparent;
+}
+
+.track-row__sk-art {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  flex: none;
+}
+
+.track-row__sk-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.track-row__sk-line {
+  height: 11px;
+  border-radius: 6px;
+}
+
+.player-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.player-skeleton__art {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--r-lg);
+}
+
+.player-skeleton__line {
+  height: 18px;
+  border-radius: 8px;
+}
+
+.player-skeleton__bar {
+  height: 52px;
+  border-radius: var(--r-md);
+}
+
+/* ---------- tablet ---------- */
+
+@media (min-width: 768px) {
+  .discover {
+    gap: 40px;
+  }
+}
+
+/* ---------- desktop ---------- */
+
+@media (min-width: 1024px) {
+  .discover {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-areas:
+      'featured player'
+      'tags player'
+      'recent player'
+      'trending trending';
+    column-gap: 34px;
+    row-gap: 40px;
+  }
+
+  .player-sec {
+    position: sticky;
+    top: 28px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .discover {
+    grid-template-columns: minmax(0, 1fr) 408px;
+    column-gap: 44px;
+  }
+}

@@ -1,0 +1,98 @@
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background var(--dur-fast) ease;
+}
+
+.track-row:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.track-row:active {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.track-row__art {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  overflow: hidden;
+  flex: none;
+  background: var(--surface-4);
+}
+
+.track-row__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.track-row__play-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(8, 8, 10, 0.5);
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.track-row:hover .track-row__play-hint {
+  opacity: 1;
+}
+
+.track-row.is-playing .track-row__play-hint {
+  opacity: 0;
+}
+
+.track-row__meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.track-row__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.track-row__eq {
+  flex: none;
+}
+
+.track-row__title {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-row.is-playing .track-row__title {
+  color: var(--accent-strong);
+}
+
+.track-row__handle {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-row__duration {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  flex: none;
+}

@@ -1,0 +1,73 @@
+.topnav {
+  position: relative;
+  z-index: 20;
+  display: flex;
+}
+
+.topnav__inner {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px;
+  border-radius: var(--r-pill);
+  background: rgba(14, 14, 17, 0.72);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pill);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.topnav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-3);
+  white-space: nowrap;
+  transition:
+    color var(--dur-fast) ease,
+    background var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease,
+    transform var(--dur-fast) ease;
+}
+
+.topnav__item svg {
+  opacity: 0.7;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.topnav__item:hover {
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.topnav__item.is-active {
+  color: var(--text);
+  background: var(--surface-4);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 6px 18px -6px rgba(0, 0, 0, 0.6),
+    0 0 18px -4px var(--accent-glow);
+}
+
+.topnav__item.is-active svg {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* Desktop: the pill floats, straddling the top edge of the app surface. */
+@media (min-width: 1024px) {
+  .topnav {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}

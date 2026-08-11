@@ -1,0 +1,39 @@
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  transition:
+    color var(--dur-fast) ease,
+    background var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    transform var(--dur-fast) ease;
+}
+
+.tag-pill:hover {
+  color: var(--text);
+  background: var(--surface-3);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.tag-pill:active {
+  transform: translateY(0);
+}
+
+.tag-pill__hash {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tag-pill__count {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}

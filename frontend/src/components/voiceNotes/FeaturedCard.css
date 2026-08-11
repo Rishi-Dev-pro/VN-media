@@ -1,0 +1,193 @@
+.featured-card {
+  --card-rot: 0deg;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  border-radius: var(--r-lg);
+  padding: 10px 10px 14px;
+  background: linear-gradient(165deg, var(--surface-3) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  transform: rotate(var(--card-rot));
+  transform-origin: center bottom;
+  transition:
+    transform var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) ease,
+    border-color var(--dur-med) ease;
+  cursor: pointer;
+}
+
+.featured-card:hover {
+  transform: rotate(0deg) translateY(-6px);
+  box-shadow: 0 30px 60px -22px rgba(0, 0, 0, 0.85);
+  border-color: var(--line-strong);
+}
+
+.featured-card:active {
+  transform: rotate(0deg) translateY(-2px);
+}
+
+.featured-card.is-playing {
+  border-color: rgba(159, 212, 232, 0.35);
+  box-shadow: 0 26px 56px -22px rgba(0, 0, 0, 0.85), 0 0 30px -10px var(--accent-glow);
+}
+
+/* ---------- artwork ---------- */
+
+.featured-card__art {
+  position: relative;
+  border-radius: 16px 16px 12px 12px;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: var(--surface-4);
+}
+
+.featured-card__art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 32%;
+  /* record-sleeve hole cut at the top centre */
+  -webkit-mask-image: radial-gradient(circle at 50% 16px, transparent 0 10px, #000 10.6px 100%);
+  mask-image: radial-gradient(circle at 50% 16px, transparent 0 10px, #000 10.6px 100%);
+  transition: transform var(--dur-slow) var(--ease-out), filter var(--dur-med) ease;
+}
+
+.featured-card:hover .featured-card__art img {
+  transform: scale(1.05);
+}
+
+.featured-card.is-playing .featured-card__art img {
+  filter: saturate(1.12) brightness(1.04);
+}
+
+.featured-card__hole-ring {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65), inset 0 1px 6px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.featured-card__chip {
+  position: absolute;
+  top: 38px;
+  left: 12px;
+  padding: 5px 9px;
+  border-radius: var(--r-pill);
+  color: var(--accent-strong);
+  background: rgba(10, 10, 12, 0.5);
+  border: 1px solid rgba(159, 212, 232, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.featured-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(8, 8, 10, 0.5) 100%);
+  pointer-events: none;
+}
+
+.featured-card__play {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0e1014;
+  background: linear-gradient(160deg, var(--accent-strong), var(--accent));
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.6), 0 0 22px -6px var(--accent-glow);
+  transition: transform var(--dur-fast) var(--ease-spring), opacity var(--dur-fast) ease;
+  pointer-events: none;
+}
+
+.featured-card:hover .featured-card__play {
+  transform: scale(1.1);
+}
+
+.featured-card.is-playing .featured-card__play {
+  background: var(--text);
+  color: #101216;
+}
+
+/* ---------- footer ---------- */
+
+.featured-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 6px;
+}
+
+.featured-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.featured-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.featured-card__eq {
+  flex: none;
+}
+
+.featured-card__title {
+  font-size: 1.02rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.featured-card__sub {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.featured-card.is-playing .featured-card__title {
+  color: var(--accent-strong);
+}
+
+/* ---------- cascade stack ---------- */
+
+.featured-card--cascade {
+  margin-top: -12px;
+  box-shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.75);
+}
+
+.featured-card--cascade:first-of-type {
+  margin-top: 0;
+}
+
+@media (min-width: 768px) {
+  .featured-card {
+    padding: 12px 12px 16px;
+    gap: 16px;
+  }
+}

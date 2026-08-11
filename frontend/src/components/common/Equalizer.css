@@ -1,0 +1,29 @@
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.eq__bar {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: scaleY(0.35);
+  transform-origin: bottom;
+  transition: transform var(--dur-fast) ease;
+}
+
+.eq.is-playing .eq__bar {
+  animation: eq-bounce 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes eq-bounce {
+  from {
+    transform: scaleY(0.3);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
