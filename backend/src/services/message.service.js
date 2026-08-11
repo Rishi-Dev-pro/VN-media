@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const path = require('path');
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const conversationService = require('./conversation.service');
@@ -184,6 +185,22 @@ class MessageService {
       fileSize,
       mimeType,
       audioUrl: message.audioUrl,
+    };
+  }
+
+  /**
+   * Get audio download information & safe filename for private conversation audio downloads.
+   * Verifies authentication, conversation membership, message ownership, audio type, non-deleted state, and storage existence.
+   */
+  async getAudioMessageDownloadInfo({ conversationId, messageId, currentUserId }) {
+    const streamInfo = await this.getAudioMessageStreamInfo({ conversationId, messageId, currentUserId });
+    const ext = path.extname(streamInfo.audioUrl || '').toLowerCase() || '.wav';
+    const filename = `message-audio-${messageId}${ext}`;
+
+    return {
+      ...streamInfo,
+      conversationId,
+      filename,
     };
   }
 

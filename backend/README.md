@@ -264,26 +264,30 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 - **`Notification`** (`src/models/Notification.js`): In-app notifications (`recipientId`, `actorId`, `type`, `targetType`, `targetId`, `activityEventId`, `metadata`, `readAt`, `createdAt`).
 - **`NotificationPreference`** (`src/models/NotificationPreference.js`): User notification controls (`userId`, `userFollowed`, `voiceNoteLiked`, `voiceNoteCommented`, `createdAt`, `updatedAt`).
 
-### 11. Direct Messaging & Private Conversations (Phase 18, Phase 19, Phase 20 & Phase 21)
+### 11. Direct Messaging, Offline Media Access & Downloads (Phase 18, Phase 19, Phase 20, Phase 21 & Phase 22)
 - **`POST /api/conversations`**: Create or retrieve an existing 1-to-1 conversation with a target user (`userId`). Uses deterministic participant pairing (`[userA, userB].sort()`) and DB unique compound index. Auth required.
 - **`GET /api/conversations`**: Retrieve paginated list of conversations for current user (`?page=1&limit=20`), enriched with sanitized `otherParticipant`, `unreadCount`, and `lastMessage`. Auth required.
 - **`GET /api/conversations/:id`**: Retrieve details for a single conversation. Participant only. Auth required.
 - **`POST /api/conversations/:id/messages`**: Send a text message inside a conversation (`content`). Auth required.
 - **`POST /api/conversations/:id/messages/audio`**: Upload and send an audio message (`audio`). Validates audio container magic bytes, file extension, MIME type, max file size (10MB), and max duration (300s). Failure-safe rollback. Auth required.
 - **`GET /api/conversations/:id/messages/:messageId/audio`**: Stream private audio message with HTTP Range support (`bytes=start-end`, `bytes=start-`, `bytes=-suffix`). Enforces strict conversation participant authorization, non-deleted state (`deletedAt = null`), storage existence, and outputs `200 OK`, `206 Partial Content`, or `416 Range Not Satisfiable` with `Cache-Control: private, no-cache, no-store`. Participant only. Auth required.
-- **`GET /api/conversations/:id/messages`**: Retrieve paginated message history (`?page=1&limit=50`). Formatted audio messages expose application endpoint `/api/conversations/:id/messages/:messageId/audio`. Participant only. Auth required.
-- **`PATCH /api/conversations/:id/read`**: Mark incoming unread messages as read by recipient. Auth required.
-- **`DELETE /api/conversations/:conversationId/messages/:messageId`**: Soft-delete owned message (`deletedAt = timestamp`). Sender only. Auth required.
+- **`GET /api/conversations/:id/messages/:messageId/download`**: Download private conversation audio message with `Content-Disposition: attachment`, HTTP Range support, and strict participant authorization. Participant only. Auth required.
+- **`GET /api/vns/:id/download`**: Download VoiceNote file with `Content-Disposition: attachment`, HTTP Range support, and public/owner authorization checks. Auth required (or public for public active VoiceNotes).
+- **`POST /api/downloads`**: Initiate or retrieve download tracking record for a VoiceNote or private audio message (`mediaType`, `voiceNoteId`, `messageId`, `deviceId`). Auth required.
+- **`GET /api/downloads`**: Retrieve user's download records with dynamic authorization re-evaluation (revokes unauthorized/deleted media). Auth required.
+- **`GET /api/downloads/:id`**: Retrieve single download record with dynamic authorization re-evaluation. Auth required.
+- **`PATCH /api/downloads/:id`**: Update download lifecycle status (`pending`, `active`, `completed`, `failed`, `revoked`). Auth required.
 - **`AudioCleanupService`** (`src/services/audioCleanup.service.js`): Controlled internal audio storage lifecycle cleanup service (`cleanupDeletedAudioMessages`, `detectOrphanAudioFiles`). Manages configurable retention periods (`AUDIO_DELETED_RETENTION_DAYS`, default: 7 days), batched candidate selection, duplicate storage reference protection, physical file deletion, missing file handling, and orphan detection without hard-deleting Mongoose `Message` documents.
 
 ---
 
-## Data Models (Phase 1, Phase 6, Phase 7, Phase 8, Phase 10, Phase 11, Phase 12, Phase 14, Phase 15, Phase 16, Phase 17, Phase 18, Phase 19, Phase 20 & Phase 21)
+## Data Models (Phase 1, Phase 6, Phase 7, Phase 8, Phase 10, Phase 11, Phase 12, Phase 14, Phase 15, Phase 16, Phase 17, Phase 18, Phase 19, Phase 20, Phase 21 & Phase 22)
 
 - **`User`** (`src/models/User.js`): Accounts (`username`, `email`, `passwordHash`, `avatar`, `bio`, `timestamps`).
 - **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `tags`, `audioUrl`, `duration`, `visibility`, `deletedAt`, `timestamps`).
 - **`Conversation`** (`src/models/Conversation.js`): 1-to-1 conversations (`participantOne`, `participantTwo`, `lastMessageAt`, `lastMessageId`, `timestamps`). Compound unique index on `{ participantOne: 1, participantTwo: 1 }`.
 - **`Message`** (`src/models/Message.js`): Text & audio messages (`conversationId`, `senderId`, `content`, `messageType: 'text'|'audio'`, `audioUrl`, `duration`, `mimeType`, `fileSize`, `readAt`, `deletedAt`, `timestamps`). Compound indexes on `{ conversationId: 1, deletedAt: 1, createdAt: 1 }` and `{ conversationId: 1, senderId: 1, readAt: 1, deletedAt: 1 }`.
+- **`Download`** (`src/models/Download.js`): Offline media download tracking (`userId`, `mediaType`, `voiceNoteId`, `messageId`, `conversationId`, `deviceId`, `status`, `fileSize`, `mimeType`, `downloadUrl`, `errorMessage`, `lastAccessedAt`, `timestamps`). Compound unique index on `{ userId: 1, mediaType: 1, voiceNoteId: 1, messageId: 1, deviceId: 1 }`.
 - **`Comment`** (`src/models/Comment.js`): Comments (`voiceNoteId`, `userId`, `parentCommentId`, `content`, `deletedAt`, `timestamps`). Compound indexes on `{ voiceNoteId: 1, deletedAt: 1, createdAt: 1 }` and `{ parentCommentId: 1, deletedAt: 1, createdAt: 1 }`.
 - **`Like`** (`src/models/Like.js`): Likes join schema (`userId`, `voiceNoteId`, `createdAt`). Compound unique index on `{ userId: 1, voiceNoteId: 1 }`.
 - **`Album`** (`src/models/Album.js`): Albums (`ownerId`, `title`, `description`, `coverImage`, `visibility`, `timestamps`). Compound indexes on `{ ownerId: 1, createdAt: -1 }`, `{ visibility: 1, createdAt: -1 }`, and `{ ownerId: 1, visibility: 1, createdAt: -1 }`.
@@ -295,15 +299,15 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 
 ---
 
-## Current Status & Phase 21 Scope
+## Current Status & Phase 22 Scope
 
 > [!NOTE]
-> **Phase 0 through Phase 21 Status: COMPLETE.**
-> Private 1-to-1 direct messaging, deterministic participant pairing, text & audio messages (`messageType = 'audio'`), audio container signature validation (magic bytes), duration extraction, max file size & duration limits, storage failure rollback (no orphan files), authorization-aware private audio streaming (`GET /api/conversations/:id/messages/:messageId/audio`), HTTP byte range request parsing (`bytes=start-end`, `bytes=start-`, `bytes=-suffix`), `200 OK`, `206 Partial Content`, and `416 Range Not Satisfiable` HTTP responses, `Cache-Control` security, configurable audio retention lifecycle (`AUDIO_DELETED_RETENTION_DAYS`, default: 7 days), `AudioCleanupService` batched file cleanup, idempotency, duplicate reference protection, orphan file detection, non-destructive Message document preservation, conversation listing with batched unread counts, recipient message read state updates, soft deletion (`deletedAt = timestamp`), real-time Socket.IO delivery (`message:new`), privacy boundaries, and regression safety are fully implemented and verified via 38 automated tests in `testPhase21AudioCleanup.js` (976 passing test cases across all phases).
+> **Phase 0 through Phase 22 Status: COMPLETE.**
+> Private 1-to-1 direct messaging, deterministic participant pairing, text & audio messages (`messageType = 'audio'`), audio container signature validation (magic bytes), duration extraction, max file size & duration limits, storage failure rollback (no orphan files), authorization-aware private audio streaming (`GET /api/conversations/:id/messages/:messageId/audio`), HTTP byte range request parsing (`bytes=start-end`, `bytes=start-`, `bytes=-suffix`), `200 OK`, `206 Partial Content`, and `416 Range Not Satisfiable` HTTP responses, `Cache-Control` security, configurable audio retention lifecycle (`AUDIO_DELETED_RETENTION_DAYS`, default: 7 days), `AudioCleanupService` batched file cleanup, idempotency, duplicate reference protection, orphan file detection, non-destructive Message document preservation, offline media access download endpoints (`GET /api/vns/:id/download` and `GET /api/conversations/:id/messages/:messageId/download`), `Content-Disposition: attachment` headers, `Download` state tracking model, status updates (`pending`, `active`, `completed`, `failed`, `revoked`), dynamic authorization re-evaluation, user and device isolation, conversation listing with batched unread counts, recipient message read state updates, soft deletion (`deletedAt = timestamp`), real-time Socket.IO delivery (`message:new`), privacy boundaries, and regression safety are fully implemented and verified via 53 automated tests in `testPhase22OfflineMedia.js` (1,029 passing test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
-- ❌ Offline audio download / media access (Phase 22)
-- ❌ Production hardening & final security audit (Phase 23)
+- ❌ Production hardening, security rate-limiting & final audit (Phase 23)
+- ❌ Client-side offline cache/storage implementation (frontend/mobile responsibility)
 - ❌ Group chats / group audio messages
 - ❌ Message reactions or message editing
 - ❌ Typing indicators or presence system
@@ -312,5 +316,4 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 
 ## Future Roadmap
 
-1. **Phase 22 — Offline Download / Media Access Foundation:** Offline synchronization and media access APIs.
-2. **Phase 23 — Production Hardening, Security & Final Backend Audit:** Security hardening, rate limiting, final performance audit, and production deployment preparation.
+1. **Phase 23 — Production Hardening, Security & Final Backend Audit:** Security hardening, rate limiting, final performance audit, and production deployment preparation.

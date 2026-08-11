@@ -627,7 +627,7 @@ class VoiceNoteService {
     const fileExists = await storageService.fileExists(voiceNote.audioUrl);
     if (!fileExists) {
       const err = new Error('Audio storage file not found');
-      err.statusCode = 500;
+      err.statusCode = 404;
       throw err;
     }
 

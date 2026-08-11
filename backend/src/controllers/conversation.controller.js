@@ -251,6 +251,104 @@ const streamAudioMessage = async (req, res, next) => {
   }
 };
 
+/**
+ * Download private audio message with Content-Disposition headers and HTTP Range support.
+ * GET /api/conversations/:id/messages/:messageId/download
+ */
+const downloadAudioMessage = async (req, res, next) => {
+  try {
+    const { fileSize, mimeType, filename, audioUrl } = await messageService.getAudioMessageDownloadInfo({
+      conversationId: req.params.conversationId || req.params.id,
+      messageId: req.params.messageId,
+      currentUserId: req.user._id,
+    });
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+
+    const range = req.headers.range;
+
+    if (!range) {
+      res.setHeader('Content-Length', fileSize);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.status(200);
+      return storageService.createReadStream(audioUrl).pipe(res);
+    }
+
+    if (!range.startsWith('bytes=')) {
+      res.setHeader('Content-Range', `bytes */${fileSize}`);
+      return res.status(416).json({ success: false, message: 'Requested Range Not Satisfiable' });
+    }
+
+    const rangeSpec = range.slice(6).trim();
+
+    // Suffix range `bytes=-N`
+    if (rangeSpec.startsWith('-')) {
+      const suffixStr = rangeSpec.slice(1);
+      const suffix = parseInt(suffixStr, 10);
+      if (isNaN(suffix) || suffix <= 0) {
+        res.setHeader('Content-Range', `bytes */${fileSize}`);
+        return res.status(416).json({ success: false, message: 'Requested Range Not Satisfiable' });
+      }
+
+      const start = Math.max(0, fileSize - suffix);
+      const end = fileSize - 1;
+      const chunkSize = end - start + 1;
+
+      res.status(206);
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Content-Length', chunkSize);
+      return storageService.createReadStream(audioUrl, { start, end }).pipe(res);
+    }
+
+    // Standard range `bytes=start-end` or `bytes=start-`
+    const parts = rangeSpec.split('-');
+    if (parts.length !== 2) {
+      res.setHeader('Content-Range', `bytes */${fileSize}`);
+      return res.status(416).json({ success: false, message: 'Requested Range Not Satisfiable' });
+    }
+
+    const startStr = parts[0];
+    const endStr = parts[1];
+
+    if (startStr === '') {
+      res.setHeader('Content-Range', `bytes */${fileSize}`);
+      return res.status(416).json({ success: false, message: 'Requested Range Not Satisfiable' });
+    }
+
+    const start = parseInt(startStr, 10);
+    let end = endStr !== '' ? parseInt(endStr, 10) : fileSize - 1;
+
+    if (
+      isNaN(start) ||
+      isNaN(end) ||
+      start < 0 ||
+      start >= fileSize ||
+      start > end
+    ) {
+      res.setHeader('Content-Range', `bytes */${fileSize}`);
+      return res.status(416).json({ success: false, message: 'Requested Range Not Satisfiable' });
+    }
+
+    if (end >= fileSize) {
+      end = fileSize - 1;
+    }
+
+    const chunkSize = end - start + 1;
+
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Content-Length', chunkSize);
+
+    return storageService.createReadStream(audioUrl, { start, end }).pipe(res);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createConversation,
   getConversations,
@@ -258,6 +356,7 @@ module.exports = {
   sendMessage,
   sendAudioMessage,
   streamAudioMessage,
+  downloadAudioMessage,
   getMessageHistory,
   markRead,
   deleteMessage,
