@@ -89,11 +89,17 @@ class ConversationService {
       formattedSender = msgObj.sender;
     }
 
+    const isAudio = msgObj.messageType === 'audio';
+
     return {
       id: msgObj._id ? msgObj._id.toString() : msgObj.id,
       conversationId: msgObj.conversationId ? msgObj.conversationId.toString() : null,
-      content: isDeleted ? '[deleted]' : msgObj.content,
+      content: isDeleted ? '[deleted]' : (isAudio ? null : (msgObj.content || null)),
       messageType: msgObj.messageType || 'text',
+      audioUrl: isDeleted ? null : (msgObj.audioUrl || null),
+      duration: isDeleted ? null : (typeof msgObj.duration === 'number' ? msgObj.duration : null),
+      mimeType: isDeleted ? null : (msgObj.mimeType || null),
+      fileSize: isDeleted ? null : (typeof msgObj.fileSize === 'number' ? msgObj.fileSize : null),
       readAt: msgObj.readAt || null,
       deletedAt: msgObj.deletedAt || null,
       createdAt: msgObj.createdAt,

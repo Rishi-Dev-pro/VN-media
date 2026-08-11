@@ -1,6 +1,7 @@
 const express = require('express');
 const conversationController = require('../controllers/conversation.controller');
 const { protect } = require('../middleware/auth');
+const { uploadSingleAudio } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -14,6 +15,7 @@ router.get('/:id', conversationController.getConversationById);
 
 // Message endpoints
 router.post('/:id/messages', conversationController.sendMessage);
+router.post('/:id/messages/audio', uploadSingleAudio, conversationController.sendAudioMessage);
 router.get('/:id/messages', conversationController.getMessageHistory);
 router.patch('/:id/read', conversationController.markRead);
 router.delete('/:id/messages/:messageId', conversationController.deleteMessage);

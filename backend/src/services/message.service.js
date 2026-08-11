@@ -2,11 +2,112 @@ const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const conversationService = require('./conversation.service');
+const audioService = require('./audio.service');
+const storageService = require('./storage.service');
 const { getIO } = require('../realtime/socket');
 
 const MAX_MESSAGE_LENGTH = 5000;
+const MAX_DIRECT_AUDIO_DURATION = 300; // 5 minutes max duration
+const MAX_DIRECT_AUDIO_SIZE = 10 * 1024 * 1024; // 10MB max file size
 
 class MessageService {
+  /**
+   * Send an audio message inside a 1-to-1 conversation.
+   * Validates file, extracts metadata, saves to storage, creates Message,
+   * updates conversation, cleans up saved file if DB fails, and delivers real-time socket payload.
+   */
+  async sendAudioMessage({ conversationId, senderUser, file }) {
+    if (!senderUser || !senderUser._id) {
+      const err = new Error('Authentication required');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    if (!conversationId || !mongoose.Types.ObjectId.isValid(conversationId.toString())) {
+      const err = new Error('Conversation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      const err = new Error('Conversation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (!conversationService.isParticipant(conversation, senderUser._id)) {
+      const err = new Error('Conversation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (!file || !file.buffer) {
+      const err = new Error('Audio file is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (file.buffer.length > MAX_DIRECT_AUDIO_SIZE) {
+      const err = new Error('File size exceeds maximum limit of 10MB');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Validate extension, MIME type, magic bytes, and extract duration
+    const { extension, duration } = await audioService.validateAndExtractMetadata(
+      file.buffer,
+      file.originalname,
+      file.mimetype
+    );
+
+    if (duration > MAX_DIRECT_AUDIO_DURATION) {
+      const err = new Error(`Audio duration exceeds maximum limit of ${MAX_DIRECT_AUDIO_DURATION} seconds`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Save audio file buffer to storage
+    const { storageRef } = await storageService.saveFile(file.buffer, extension);
+
+    let message;
+    try {
+      message = await Message.create({
+        conversationId,
+        senderId: senderUser._id,
+        messageType: 'audio',
+        audioUrl: storageRef,
+        duration,
+        mimeType: file.mimetype,
+        fileSize: file.buffer.length,
+      });
+
+      conversation.lastMessageAt = message.createdAt;
+      conversation.lastMessageId = message._id;
+      await conversation.save();
+    } catch (dbErr) {
+      // Failure safety: clean up orphan saved audio file if database operations fail
+      await storageService.deleteFile(storageRef);
+      throw dbErr;
+    }
+
+    await message.populate('senderId');
+    const formattedMessage = conversationService.formatMessage(message);
+
+    // Determine recipient user ID
+    const recipientId = conversation.participantOne.toString() === senderUser._id.toString()
+      ? conversation.participantTwo.toString()
+      : conversation.participantOne.toString();
+
+    // Deliver real-time message payload via Socket.IO gateway strictly to recipient user room
+    const io = getIO();
+    if (io && recipientId) {
+      io.to(`user:${recipientId}`).emit('message:new', formattedMessage);
+    }
+
+    return formattedMessage;
+  }
+
   /**
    * Send a text message inside a 1-to-1 conversation.
    * Updates conversation lastMessageAt and lastMessageId, and emits message:new to recipient socket room.

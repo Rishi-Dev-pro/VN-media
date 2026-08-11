@@ -297,11 +297,11 @@ const runTests = async () => {
     // Test 22: Invalid messageType rejected by schema enum
     let err22 = null;
     try {
-      await Message.create({ conversationId: convABId, senderId: userAId, content: 'Test', messageType: 'audio' });
+      await Message.create({ conversationId: convABId, senderId: userAId, content: 'Test', messageType: 'video' });
     } catch (e) {
       err22 = e;
     }
-    assert(err22 !== null, 'Test 22: Unsupported messageType "audio" rejected by schema enum');
+    assert(err22 !== null, 'Test 22: Unsupported messageType "video" rejected by schema enum');
 
     // Test 23: readAt defaults to null
     assert(validMsg17.readAt === null, 'Test 23: readAt defaults to null');

@@ -133,11 +133,30 @@ const deleteMessage = async (req, res, next) => {
   }
 };
 
+/**
+ * Upload and send an audio message inside a conversation.
+ * POST /api/conversations/:id/messages/audio
+ */
+const sendAudioMessage = async (req, res, next) => {
+  try {
+    const message = await messageService.sendAudioMessage({
+      conversationId: req.params.id,
+      senderUser: req.user,
+      file: req.file,
+    });
+
+    return sendSuccess(res, 'Audio message sent successfully', { message }, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createConversation,
   getConversations,
   getConversationById,
   sendMessage,
+  sendAudioMessage,
   getMessageHistory,
   markRead,
   deleteMessage,

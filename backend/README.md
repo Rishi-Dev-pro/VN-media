@@ -264,26 +264,54 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 - **`Notification`** (`src/models/Notification.js`): In-app notifications (`recipientId`, `actorId`, `type`, `targetType`, `targetId`, `activityEventId`, `metadata`, `readAt`, `createdAt`).
 - **`NotificationPreference`** (`src/models/NotificationPreference.js`): User notification controls (`userId`, `userFollowed`, `voiceNoteLiked`, `voiceNoteCommented`, `createdAt`, `updatedAt`).
 
+### 11. Direct Messaging & Private Conversations (Phase 18 & Phase 19)
+- **`POST /api/conversations`**: Create or retrieve an existing 1-to-1 conversation with a target user (`userId`). Uses deterministic participant pairing (`[userA, userB].sort()`) and DB unique compound index. Auth required.
+- **`GET /api/conversations`**: Retrieve paginated list of conversations for current user (`?page=1&limit=20`), enriched with sanitized `otherParticipant`, `unreadCount`, and `lastMessage`. Auth required.
+- **`GET /api/conversations/:id`**: Retrieve details for a single conversation. Participant only. Auth required.
+- **`POST /api/conversations/:id/messages`**: Send a text message inside a conversation (`content`). Auth required.
+- **`POST /api/conversations/:id/messages/audio`**: Upload and send an audio message (`audio`). Validates audio container magic bytes, file extension, MIME type, max file size (10MB), and max duration (300s). Failure-safe rollback. Auth required.
+- **`GET /api/conversations/:id/messages`**: Retrieve paginated message history (`?page=1&limit=50`). Participant only. Auth required.
+- **`PATCH /api/conversations/:id/read`**: Mark incoming unread messages as read by recipient. Auth required.
+- **`DELETE /api/conversations/:conversationId/messages/:messageId`**: Soft-delete owned message (`deletedAt = timestamp`). Sender only. Auth required.
+
 ---
 
-## Current Status & Phase 17 Scope
+## Data Models (Phase 1, Phase 6, Phase 7, Phase 8, Phase 10, Phase 11, Phase 12, Phase 14, Phase 15, Phase 16, Phase 17, Phase 18 & Phase 19)
+
+- **`User`** (`src/models/User.js`): Accounts (`username`, `email`, `passwordHash`, `avatar`, `bio`, `timestamps`).
+- **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `tags`, `audioUrl`, `duration`, `visibility`, `deletedAt`, `timestamps`).
+- **`Conversation`** (`src/models/Conversation.js`): 1-to-1 conversations (`participantOne`, `participantTwo`, `lastMessageAt`, `lastMessageId`, `timestamps`). Compound unique index on `{ participantOne: 1, participantTwo: 1 }`.
+- **`Message`** (`src/models/Message.js`): Text & audio messages (`conversationId`, `senderId`, `content`, `messageType: 'text'|'audio'`, `audioUrl`, `duration`, `mimeType`, `fileSize`, `readAt`, `deletedAt`, `timestamps`). Compound indexes on `{ conversationId: 1, deletedAt: 1, createdAt: 1 }` and `{ conversationId: 1, senderId: 1, readAt: 1, deletedAt: 1 }`.
+- **`Comment`** (`src/models/Comment.js`): Comments (`voiceNoteId`, `userId`, `parentCommentId`, `content`, `deletedAt`, `timestamps`). Compound indexes on `{ voiceNoteId: 1, deletedAt: 1, createdAt: 1 }` and `{ parentCommentId: 1, deletedAt: 1, createdAt: 1 }`.
+- **`Like`** (`src/models/Like.js`): Likes join schema (`userId`, `voiceNoteId`, `createdAt`). Compound unique index on `{ userId: 1, voiceNoteId: 1 }`.
+- **`Album`** (`src/models/Album.js`): Albums (`ownerId`, `title`, `description`, `coverImage`, `visibility`, `timestamps`). Compound indexes on `{ ownerId: 1, createdAt: -1 }`, `{ visibility: 1, createdAt: -1 }`, and `{ ownerId: 1, visibility: 1, createdAt: -1 }`.
+- **`AlbumItem`** (`src/models/AlbumItem.js`): Album items join schema (`albumId`, `voiceNoteId`, `position`, `createdAt`).
+- **`Follow`** (`src/models/Follow.js`): Follow social graph (`followerId`, `followingId`, `createdAt`).
+- **`ActivityEvent`** (`src/models/ActivityEvent.js`): Internal activity logs (`actorId`, `type`, `targetType`, `targetId`, `metadata`, `createdAt`).
+- **`Notification`** (`src/models/Notification.js`): In-app notifications (`recipientId`, `actorId`, `type`, `targetType`, `targetId`, `activityEventId`, `metadata`, `readAt`, `createdAt`).
+- **`NotificationPreference`** (`src/models/NotificationPreference.js`): User notification controls (`userId`, `userFollowed`, `voiceNoteLiked`, `voiceNoteCommented`, `createdAt`, `updatedAt`).
+
+---
+
+## Current Status & Phase 19 Scope
 
 > [!NOTE]
-> **Phase 0 through Phase 17 Status: COMPLETE.**
-> Threaded discussion system, 1-level reply nesting restriction, soft deletion (`deletedAt`), top-level comment masking (`"[deleted]"`), batched N+1-free VoiceNote response enrichment (`commentCount`), `COMMENT_CREATED` ActivityEvents, preference-controlled `VOICE_NOTE_COMMENTED` Notifications, Socket.IO delivery, privacy guards, and regression safety are fully implemented and verified via 83 automated tests in `testPhase17Comments.js` (748 passing test cases across all phases).
+> **Phase 0 through Phase 19 Status: COMPLETE.**
+> Private 1-to-1 direct messaging, deterministic participant pairing, text & audio messages (`messageType = 'audio'`), audio container signature validation (magic bytes), duration extraction, max file size & duration limits, storage failure rollback (no orphan files), conversation listing with batched unread counts, recipient message read state updates, soft deletion (`deletedAt = timestamp`), real-time Socket.IO delivery (`message:new`), privacy boundaries, and regression safety are fully implemented and verified via 53 automated tests in `testPhase19AudioMessages.js` and 83 automated tests in `testPhase18Messaging.js` (884 passing test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
-- ❌ Push notifications (FCM / APNs)
-- ❌ Email & SMS notifications
-- ❌ Album comments & album likes
-- ❌ Album followers
-- ❌ Comment editing, reactions, or likes
-- ❌ Comment mentions, hashtags, or rich text
-- ❌ Recommendation algorithms
-- ❌ Listening & download history analytics
+- ❌ Private audio streaming authorization & playback endpoints (Phase 20)
+- ❌ Permanent storage audio cleanup workers (Phase 21)
+- ❌ Offline audio download / media access (Phase 22)
+- ❌ Group chats / group audio messages
+- ❌ Message reactions or message editing
+- ❌ Typing indicators or presence system
 
 ---
 
 ## Future Roadmap
 
-1. **Phase 18 — User Direct Messaging & Private Conversations:** 1-on-1 private messaging, audio message sharing, conversation threads, and real-time message delivery.
+1. **Phase 20 — Private Audio Streaming & Playback:** Authorization-aware media streaming and range requests for private conversation audio messages.
+2. **Phase 21 — Audio Message Lifecycle & Storage Cleanup:** Permanent deletion, storage cleanup workers, and retention policy.
+3. **Phase 22 — Offline Download / Media Access Foundation:** Offline synchronization and media access APIs.
+4. **Phase 23 — Production Hardening, Security & Final Backend Audit:** Security hardening, rate limiting, final performance audit, and production deployment preparation.

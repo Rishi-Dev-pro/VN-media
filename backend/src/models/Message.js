@@ -16,18 +16,38 @@ const messageSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      required: [true, 'Message content is required'],
+      required: [
+        function () {
+          return this.messageType === 'text';
+        },
+        'Message content is required for text messages',
+      ],
       trim: true,
-      minlength: [1, 'Message content cannot be empty'],
       maxlength: [5000, 'Message content cannot exceed 5000 characters'],
     },
     messageType: {
       type: String,
       enum: {
-        values: ['text'],
+        values: ['text', 'audio'],
         message: 'Unsupported message type: {VALUE}',
       },
       default: 'text',
+    },
+    audioUrl: {
+      type: String,
+      default: null,
+    },
+    duration: {
+      type: Number,
+      default: null,
+    },
+    mimeType: {
+      type: String,
+      default: null,
+    },
+    fileSize: {
+      type: Number,
+      default: null,
     },
     readAt: {
       type: Date,
