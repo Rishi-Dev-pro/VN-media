@@ -104,13 +104,29 @@ class AuthService {
       throw err;
     }
 
-    // Issue JWT token
-    const token = generateToken(user._id);
+    // Issue JWT token with current user tokenVersion
+    const token = generateToken(user._id, user.tokenVersion || 0);
 
     return {
       token,
       user: sanitizeUser(user),
     };
+  }
+
+  /**
+   * Revoke all active sessions for a user by incrementing tokenVersion.
+   */
+  static async revokeAllSessions(userId) {
+    const user = await User.findById(userId);
+    if (!user) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    return true;
   }
 }
 

@@ -26,7 +26,7 @@ const errorHandler = (err, req, res, next) => {
   // Handle Mongoose invalid ObjectId errors as 400 Bad Request
   if (err.name === 'CastError') {
     statusCode = 400;
-    message = `Invalid ${err.path}: ${err.value}`;
+    message = 'Invalid resource identifier.';
   }
 
   // In production mode, sanitize 500 error messages to prevent details/path leakage

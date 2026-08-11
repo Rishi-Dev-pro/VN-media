@@ -201,14 +201,18 @@ class VoiceNoteService {
       });
 
       if (validVisibility === 'public') {
-        const activityEventService = require('./activityEvent.service');
-        const { EVENT_TYPES, TARGET_TYPES } = require('../utils/activityEvents');
-        await activityEventService.createActivityEvent({
-          actorId: user._id,
-          type: EVENT_TYPES.VOICE_NOTE_PUBLISHED,
-          targetType: TARGET_TYPES.VOICE_NOTE,
-          targetId: voiceNote._id,
-        });
+        try {
+          const activityEventService = require('./activityEvent.service');
+          const { EVENT_TYPES, TARGET_TYPES } = require('../utils/activityEvents');
+          await activityEventService.createActivityEvent({
+            actorId: user._id,
+            type: EVENT_TYPES.VOICE_NOTE_PUBLISHED,
+            targetType: TARGET_TYPES.VOICE_NOTE,
+            targetId: voiceNote._id,
+          });
+        } catch (actErr) {
+          console.error('[VoiceNoteService] ActivityEvent creation failed during createVoiceNote:', actErr.message || actErr);
+        }
       }
 
       return voiceNote;
@@ -290,14 +294,18 @@ class VoiceNoteService {
 
     // Emit VOICE_NOTE_PUBLISHED event ONLY if visibility transitioned from private -> public
     if (previousVisibility === 'private' && voiceNote.visibility === 'public') {
-      const activityEventService = require('./activityEvent.service');
-      const { EVENT_TYPES, TARGET_TYPES } = require('../utils/activityEvents');
-      await activityEventService.createActivityEvent({
-        actorId: user._id,
-        type: EVENT_TYPES.VOICE_NOTE_PUBLISHED,
-        targetType: TARGET_TYPES.VOICE_NOTE,
-        targetId: voiceNote._id,
-      });
+      try {
+        const activityEventService = require('./activityEvent.service');
+        const { EVENT_TYPES, TARGET_TYPES } = require('../utils/activityEvents');
+        await activityEventService.createActivityEvent({
+          actorId: user._id,
+          type: EVENT_TYPES.VOICE_NOTE_PUBLISHED,
+          targetType: TARGET_TYPES.VOICE_NOTE,
+          targetId: voiceNote._id,
+        });
+      } catch (actErr) {
+        console.error('[VoiceNoteService] ActivityEvent creation failed during updateVoiceNoteMetadata:', actErr.message || actErr);
+      }
     }
 
     return voiceNote;

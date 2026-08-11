@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [500, 'Bio cannot exceed 500 characters'],
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

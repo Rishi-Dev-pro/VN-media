@@ -120,6 +120,7 @@ class DownloadService {
 
   /**
    * Update download lifecycle status (pending, active, completed, failed, revoked).
+   * Enforces strict server-side state machine and re-evaluates media authorization.
    */
   async updateDownloadStatus({ downloadId, reqUser, status, errorMessage }) {
     if (!reqUser || !reqUser._id) {
@@ -146,6 +147,52 @@ class DownloadService {
       const err = new Error('Download record not found');
       err.statusCode = 404;
       throw err;
+    }
+
+    const currentStatus = downloadDoc.status;
+
+    // Strict server-side state machine transition matrix
+    const ALLOWED_TRANSITIONS = {
+      pending: ['active', 'failed', 'pending'],
+      active: ['completed', 'failed', 'active'],
+      completed: ['completed', 'failed'],
+      failed: ['failed', 'active', 'completed'],
+      revoked: ['revoked'],
+    };
+
+    const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
+    if (!allowed.includes(status)) {
+      const err = new Error(`Invalid status transition from ${currentStatus} to ${status}`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Dynamic media authorization re-evaluation prior to granting active or completed status
+    if (status === 'active' || status === 'completed') {
+      try {
+        if (downloadDoc.mediaType === 'voicenote' && downloadDoc.voiceNoteId) {
+          await voiceNoteService.getVoiceNoteStreamInfo({ voiceNoteId: downloadDoc.voiceNoteId, user: reqUser });
+        } else if (downloadDoc.mediaType === 'message_audio' && downloadDoc.messageId && downloadDoc.conversationId) {
+          await messageService.getAudioMessageStreamInfo({
+            conversationId: downloadDoc.conversationId,
+            messageId: downloadDoc.messageId,
+            currentUserId: reqUser._id,
+          });
+        } else {
+          const err = new Error('Invalid target media');
+          err.statusCode = 400;
+          throw err;
+        }
+      } catch (accessErr) {
+        downloadDoc.status = 'revoked';
+        downloadDoc.downloadUrl = null;
+        downloadDoc.errorMessage = accessErr.message || 'Media access revoked';
+        await downloadDoc.save();
+
+        const err = new Error(accessErr.message || 'Access denied: Media access revoked');
+        err.statusCode = accessErr.statusCode || 403;
+        throw err;
+      }
     }
 
     downloadDoc.status = status;

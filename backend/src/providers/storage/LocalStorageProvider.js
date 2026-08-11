@@ -33,10 +33,15 @@ class LocalStorageProvider extends StorageProvider {
    * @returns {string} Safe absolute file path
    */
   _getSafePath(storageRef) {
+    if (!storageRef || typeof storageRef !== 'string' || storageRef.includes('\0') || storageRef.includes('..')) {
+      throw new Error('Access denied: Invalid storage reference path.');
+    }
+
     const filename = path.basename(storageRef);
     const safePath = path.resolve(this.baseDir, filename);
 
-    if (!safePath.startsWith(this.baseDir)) {
+    const relative = path.relative(this.baseDir, safePath);
+    if (relative.startsWith('..') || path.isAbsolute(relative) || relative === '') {
       throw new Error('Access denied: Invalid storage reference path.');
     }
 

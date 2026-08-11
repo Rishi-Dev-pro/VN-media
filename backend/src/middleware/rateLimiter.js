@@ -1,12 +1,23 @@
 /**
  * Production-ready in-memory sliding window rate limiter middleware.
  * Outputs X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and Retry-After headers.
+ *
+ * NOTE ON PRODUCTION SCALABILITY:
+ * This in-memory rate limiter provides single-process protection against abuse. In a multi-instance
+ * or horizontally scaled production environment, rate limiting should be enforced at the API gateway /
+ * edge proxy layer or backed by a distributed key-value store such as Redis.
  */
 class MemoryRateLimiter {
-  constructor(windowMs = 15 * 60 * 1000, maxRequests = 100, message = 'Too many requests, please try again later') {
+  constructor(
+    windowMs = 15 * 60 * 1000,
+    maxRequests = 100,
+    message = 'Too many requests, please try again later',
+    maxKeys = 10000
+  ) {
     this.windowMs = windowMs;
     this.maxRequests = maxRequests;
     this.message = message;
+    this.maxKeys = maxKeys;
     this.hits = new Map();
 
     this.cleanupInterval = setInterval(() => this.cleanup(), 60 * 1000);
@@ -27,11 +38,32 @@ class MemoryRateLimiter {
   getMiddleware() {
     return (req, res, next) => {
       const now = Date.now();
-      const ip = req.ip || req.headers['x-forwarded-for'] || (req.socket && req.socket.remoteAddress) || '127.0.0.1';
-      const key = `${ip}:${req.path}`;
+
+      // Safe IP resolution: Use Express req.ip (sanitized when trust proxy is configured)
+      // Fallback safely to socket remote address. Never trust arbitrary raw client headers directly.
+      const ip = req.ip || (req.socket && req.socket.remoteAddress) || '127.0.0.1';
+
+      // Identity-aware rate limiting key construction
+      let key;
+      if (req.user && req.user._id) {
+        key = `usr:${req.user._id}:${req.baseUrl || ''}${req.path}`;
+      } else if (req.body && (req.body.email || req.body.username) && typeof (req.body.email || req.body.username) === 'string') {
+        const identifier = String(req.body.email || req.body.username).trim().toLowerCase();
+        key = `auth:${ip}:${identifier}:${req.baseUrl || ''}${req.path}`;
+      } else {
+        key = `ip:${ip}:${req.baseUrl || ''}${req.path}`;
+      }
 
       let record = this.hits.get(key);
       if (!record || record.resetTime <= now) {
+        // Enforce bounded Map size to prevent memory exhaustion / ReDoS
+        if (this.hits.size >= this.maxKeys) {
+          this.cleanup();
+          if (this.hits.size >= this.maxKeys) {
+            const oldestKey = this.hits.keys().next().value;
+            if (oldestKey) this.hits.delete(oldestKey);
+          }
+        }
         record = { count: 0, resetTime: now + this.windowMs };
         this.hits.set(key, record);
       }
@@ -62,11 +94,35 @@ class MemoryRateLimiter {
 }
 
 // Preset rate limiters tailored by endpoint sensitivity
-const authLimiter = new MemoryRateLimiter(15 * 60 * 1000, 10, 'Too many authentication attempts, please try again later.').getMiddleware();
-const apiLimiter = new MemoryRateLimiter(15 * 60 * 1000, 300, 'Too many requests, please slow down.').getMiddleware();
-const searchLimiter = new MemoryRateLimiter(60 * 1000, 30, 'Too many search requests, please slow down.').getMiddleware();
-const uploadLimiter = new MemoryRateLimiter(15 * 60 * 1000, 15, 'Too many upload attempts, please try again later.').getMiddleware();
-const downloadLimiter = new MemoryRateLimiter(15 * 60 * 1000, 60, 'Too many download requests, please try again later.').getMiddleware();
+const authLimiter = new MemoryRateLimiter(
+  15 * 60 * 1000,
+  30,
+  'Too many authentication attempts, please try again later.'
+).getMiddleware();
+
+const apiLimiter = new MemoryRateLimiter(
+  15 * 60 * 1000,
+  300,
+  'Too many requests, please slow down.'
+).getMiddleware();
+
+const searchLimiter = new MemoryRateLimiter(
+  60 * 1000,
+  30,
+  'Too many search requests, please slow down.'
+).getMiddleware();
+
+const uploadLimiter = new MemoryRateLimiter(
+  15 * 60 * 1000,
+  15,
+  'Too many upload attempts, please try again later.'
+).getMiddleware();
+
+const downloadLimiter = new MemoryRateLimiter(
+  15 * 60 * 1000,
+  60,
+  'Too many download requests, please try again later.'
+).getMiddleware();
 
 module.exports = {
   MemoryRateLimiter,

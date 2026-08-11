@@ -37,6 +37,12 @@ const protect = async (req, res, next) => {
       return sendError(res, 'User not found or access revoked', 401);
     }
 
+    if (decoded.tokenVersion !== undefined && user.tokenVersion !== undefined) {
+      if (decoded.tokenVersion !== user.tokenVersion) {
+        return sendError(res, 'User not found or access revoked', 401);
+      }
+    }
+
     // Attach authenticated user object to request
     req.user = user;
     next();
@@ -77,7 +83,13 @@ const protectOptional = async (req, res, next) => {
 
     const user = await User.findById(decoded.sub);
     if (user) {
-      req.user = user;
+      if (decoded.tokenVersion !== undefined && user.tokenVersion !== undefined) {
+        if (decoded.tokenVersion === user.tokenVersion) {
+          req.user = user;
+        }
+      } else {
+        req.user = user;
+      }
     }
 
     next();

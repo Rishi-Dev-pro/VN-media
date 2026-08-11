@@ -54,6 +54,14 @@ const socketAuth = async (socket, next) => {
       return next(err);
     }
 
+    if (decoded.tokenVersion !== undefined && user.tokenVersion !== undefined) {
+      if (decoded.tokenVersion !== user.tokenVersion) {
+        const err = new Error('User not found or access revoked');
+        err.data = { statusCode: 401 };
+        return next(err);
+      }
+    }
+
     // Attach authenticated user ID to socket instance
     socket.userId = user._id.toString();
     next();
