@@ -18,6 +18,10 @@ const notificationPreferenceSchema = new mongoose.Schema(
       type: Boolean,
       default: DEFAULT_PREFERENCES.voiceNoteLiked,
     },
+    voiceNoteCommented: {
+      type: Boolean,
+      default: DEFAULT_PREFERENCES.voiceNoteCommented,
+    },
   },
   {
     versionKey: false,

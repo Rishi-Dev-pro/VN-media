@@ -40,8 +40,17 @@ class NotificationService {
       type = NOTIFICATION_TYPES.VOICE_NOTE_LIKED;
       targetType = TARGET_TYPES.VOICE_NOTE;
       targetId = activityEvent.targetId;
+    } else if (activityEvent.type === EVENT_TYPES.COMMENT_CREATED) {
+      const voiceNote = await VoiceNote.findById(activityEvent.targetId).select('ownerId');
+      if (!voiceNote || !voiceNote.ownerId) {
+        return null;
+      }
+      recipientId = voiceNote.ownerId;
+      type = NOTIFICATION_TYPES.VOICE_NOTE_COMMENTED;
+      targetType = TARGET_TYPES.VOICE_NOTE;
+      targetId = activityEvent.targetId;
     } else {
-      // VOICE_NOTE_PUBLISHED and ALBUM_CREATED do not generate notifications in Phase 11
+      // VOICE_NOTE_PUBLISHED and ALBUM_CREATED do not generate notifications
       return null;
     }
 

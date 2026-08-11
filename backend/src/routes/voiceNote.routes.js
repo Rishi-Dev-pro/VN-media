@@ -1,6 +1,7 @@
 const express = require('express');
 const voiceNoteController = require('../controllers/voiceNote.controller');
 const likeRoutes = require('./like.routes');
+const commentRoutes = require('./comment.routes');
 const { protect, protectOptional } = require('../middleware/auth');
 const { uploadSingleAudio } = require('../middleware/upload');
 
@@ -18,8 +19,9 @@ router.get('/me', protect, voiceNoteController.getOwnerVoiceNotes);
 // Create VoiceNote (requires auth)
 router.post('/', protect, uploadSingleAudio, voiceNoteController.uploadVoiceNote);
 
-// Mount Like endpoints under /:id (e.g. /:id/like, /:id/likes)
+// Mount Like and Comment endpoints under /:id (e.g. /:id/like, /:id/likes, /:id/comments)
 router.use('/:id', likeRoutes);
+router.use('/:id/comments', commentRoutes);
 
 // Single VoiceNote access, metadata update, audio replacement, streaming, and downloads
 router.get('/:id', protectOptional, voiceNoteController.getVoiceNoteById);

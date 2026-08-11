@@ -24,6 +24,7 @@ class NotificationPreferenceService {
           userId,
           userFollowed: DEFAULT_PREFERENCES.userFollowed,
           voiceNoteLiked: DEFAULT_PREFERENCES.voiceNoteLiked,
+          voiceNoteCommented: DEFAULT_PREFERENCES.voiceNoteCommented,
         },
       },
       { new: true, upsert: true }
@@ -32,6 +33,7 @@ class NotificationPreferenceService {
     return {
       userFollowed: prefs.userFollowed,
       voiceNoteLiked: prefs.voiceNoteLiked,
+      voiceNoteCommented: prefs.voiceNoteCommented !== false,
     };
   }
 
@@ -41,7 +43,7 @@ class NotificationPreferenceService {
    *
    * @param {string|object} userId - User ID
    * @param {object} updates - Updates object (e.g. { voiceNoteLiked: false })
-   * @returns {Promise<{ userFollowed: boolean, voiceNoteLiked: boolean }>}
+   * @returns {Promise<{ userFollowed: boolean, voiceNoteLiked: boolean, voiceNoteCommented: boolean }>}
    */
   async updateUserNotificationPreferences(userId, updates) {
     if (!userId || !mongoose.Types.ObjectId.isValid(userId.toString())) {
@@ -88,6 +90,7 @@ class NotificationPreferenceService {
     return {
       userFollowed: prefs.userFollowed,
       voiceNoteLiked: prefs.voiceNoteLiked,
+      voiceNoteCommented: prefs.voiceNoteCommented !== false,
     };
   }
 
@@ -95,7 +98,7 @@ class NotificationPreferenceService {
    * Check if a specific notification type is enabled for a recipient user.
    *
    * @param {string|object} userId - Recipient User ID
-   * @param {string} notificationType - Notification type (USER_FOLLOWED or VOICE_NOTE_LIKED)
+   * @param {string} notificationType - Notification type (USER_FOLLOWED, VOICE_NOTE_LIKED, or VOICE_NOTE_COMMENTED)
    * @returns {Promise<boolean>} True if notification is enabled, false if suppressed
    */
   async checkPreference(userId, notificationType) {
@@ -109,6 +112,10 @@ class NotificationPreferenceService {
 
     if (notificationType === NOTIFICATION_TYPES.VOICE_NOTE_LIKED) {
       return prefs.voiceNoteLiked !== false;
+    }
+
+    if (notificationType === NOTIFICATION_TYPES.VOICE_NOTE_COMMENTED) {
+      return prefs.voiceNoteCommented !== false;
     }
 
     return true;
