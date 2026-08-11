@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { VoiceNote } from '../data/types';
 import { DEMO_NOW } from '../data/mockFollowing';
+import { useFollows } from '../state/FollowContext';
 import {
   createFollowingRepository,
-  initialFollowing,
   type FollowingCreator,
   type FollowingFeed,
 } from '../services/followingRepository';
@@ -41,14 +41,12 @@ export interface UseFollowing {
  * playback stays in the global PlayerContext.
  */
 export function useFollowing(): UseFollowing {
+  const { followingIds, toggleFollow, isFollowing } = useFollows();
   const [creators, setCreators] = useState<FollowingCreator[]>([]);
   const [notes, setNotes] = useState<VoiceNote[]>([]);
   const [newThisWeek, setNewThisWeek] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [followingIds, setFollowingIds] = useState<Set<string>>(
-    () => new Set(initialFollowing),
-  );
   const [filter, setFilter] = useState<FeedFilter>('all');
   const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
 
@@ -73,20 +71,6 @@ export function useFollowing(): UseFollowing {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followingIds]);
-
-  const toggleFollow = useCallback((creatorId: string) => {
-    setFollowingIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(creatorId)) next.delete(creatorId);
-      else next.add(creatorId);
-      return next;
-    });
-  }, []);
-
-  const isFollowing = useCallback(
-    (creatorId: string) => followingIds.has(creatorId),
-    [followingIds],
-  );
 
   const selectCreator = useCallback((creatorId: string | null) => {
     setSelectedCreator(creatorId);

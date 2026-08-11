@@ -6,7 +6,9 @@ import PlaceholderPage from './pages/PlaceholderPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import FollowingPage from './pages/FollowingPage';
+import SearchPage from './pages/SearchPage';
 import LandingPage from './pages/landing/LandingPage';
+import { FollowProvider } from './state/FollowContext';
 import { PlayerProvider } from './state/PlayerContext';
 import type { View } from './types/navigation';
 
@@ -23,7 +25,6 @@ function ScrollToTop() {
 const PLACEHOLDER_VIEWS: View[] = [
   'albums',
   'creators',
-  'search',
   'library',
   'messages',
   'notifications',
@@ -34,13 +35,15 @@ const PLACEHOLDER_VIEWS: View[] = [
 export default function App() {
   return (
     <PlayerProvider>
-      <ScrollToTop />
-      <Routes>
+      <FollowProvider>
+        <ScrollToTop />
+        <Routes>
         <Route path="/" element={<LandingPage />} />
 
         <Route element={<AppLayout />}>
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/following" element={<FollowingPage />} />
+          <Route path="/search" element={<SearchPage />} />
           {PLACEHOLDER_VIEWS.map((v) => (
             <Route key={v} path={`/${v}`} element={<PlaceholderPage view={v} />} />
           ))}
@@ -50,7 +53,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
+      </FollowProvider>
     </PlayerProvider>
   );
 }

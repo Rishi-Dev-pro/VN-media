@@ -1,0 +1,112 @@
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 60px;
+  padding: 0 12px 0 20px;
+  border-radius: 20px;
+  background: linear-gradient(172deg, rgba(30, 30, 37, 0.92), rgba(19, 19, 25, 0.96));
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease,
+    background var(--dur-fast) ease;
+}
+
+.search-field:focus-within {
+  border-color: rgba(159, 212, 232, 0.5);
+  box-shadow: var(--shadow-card), 0 0 0 3px var(--accent-dim),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.search-field__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.search-field__icon {
+  flex: none;
+  color: var(--text-3);
+  transition: color var(--dur-fast) ease;
+}
+
+.search-field:focus-within .search-field__icon {
+  color: var(--accent);
+}
+
+.search-field__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1.02rem;
+}
+
+.search-field__input::placeholder {
+  color: var(--text-3);
+}
+
+/* hide the native webkit search decorations */
+.search-field__input::-webkit-search-cancel-button,
+.search-field__input::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.search-field__clear {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  color: var(--text-3);
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease,
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.search-field__clear:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.search-field__clear:active {
+  transform: scale(0.92);
+}
+
+.search-field__hint {
+  flex: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--text-3);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+@media (min-width: 1024px) {
+  .search-field__hint {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 767px) {
+  .search-field {
+    height: 54px;
+    padding: 0 10px 0 16px;
+    border-radius: 17px;
+  }
+}

@@ -4,11 +4,12 @@ import './TagPill.css';
 interface TagPillProps {
   name: string;
   count?: number;
+  onClick?: () => void;
 }
 
-export function TagPill({ name, count }: TagPillProps) {
+export function TagPill({ name, count, onClick }: TagPillProps) {
   return (
-    <button type="button" className="tag-pill">
+    <button type="button" className="tag-pill" onClick={onClick}>
       <span className="tag-pill__hash" aria-hidden="true">
         #
       </span>

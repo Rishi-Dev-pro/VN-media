@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { CirclePanel } from '../components/following/CirclePanel';
 import { CreatorRail } from '../components/following/CreatorRail';
-import { FeedCard } from '../components/following/FeedCard';
+import { FeedCard } from '../components/voiceNotes/FeedCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { getCreator } from '../data/mockCreators';
 import { DEMO_LISTENER } from '../data/mockFollowing';
