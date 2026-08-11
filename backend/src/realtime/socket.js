@@ -1,5 +1,6 @@
 const { Server } = require('socket.io');
 const socketAuth = require('./socketAuth');
+const config = require('../config/env');
 
 let io = null;
 
@@ -16,11 +17,12 @@ const initSocket = (httpServer) => {
 
   io = new Server(httpServer, {
     cors: {
-      origin: '*', // Configured for development API alignment
+      origin: config.corsOrigins.includes('*') ? '*' : config.corsOrigins,
       methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     },
     transports: ['polling', 'websocket'],
+    maxHttpBufferSize: 1e6, // 1MB maximum payload size limit
   });
 
   // Register Socket.IO JWT authentication middleware

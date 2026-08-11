@@ -80,8 +80,8 @@ class AuthService {
    * Authenticate a user and issue a JWT token.
    */
   static async loginUser({ email, password }) {
-    if (!email || !password) {
-      const err = new Error('Email and password are required');
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      const err = new Error('Email and password must be valid strings');
       err.statusCode = 400;
       throw err;
     }

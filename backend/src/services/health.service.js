@@ -14,6 +14,17 @@ class HealthService {
       database: dbStatus,
     };
   }
+
+  static getReadinessInfo() {
+    const dbStatus = getDBStatus();
+    const isReady = dbStatus.isConnected;
+
+    return {
+      status: isReady ? 'ready' : 'not_ready',
+      database: isReady ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
 
 module.exports = HealthService;
