@@ -1,10 +1,11 @@
-import { Compass, Disc3, Mic2, Users } from 'lucide-react';
+import { Compass, Disc3, Mic2, Search, Users } from 'lucide-react';
 import type { NavItem, View } from '../../types/navigation';
 import './TopNav.css';
 
 const ITEMS: (NavItem & { icon: typeof Compass })[] = [
   { id: 'discover', label: 'Discover', icon: Compass },
   { id: 'following', label: 'Following', icon: Users },
+  { id: 'search', label: 'Search', icon: Search },
   { id: 'albums', label: 'Albums', icon: Disc3 },
   { id: 'creators', label: 'Creators', icon: Mic2 },
 ];

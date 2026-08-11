@@ -3,6 +3,7 @@ import {
   Home,
   Library,
   MessageCircle,
+  Search,
   User,
 } from 'lucide-react';
 import type { View } from '../../types/navigation';
@@ -11,6 +12,7 @@ import './DesktopSideNav.css';
 const ITEMS: { id: View; label: string; icon: typeof Home; notify?: boolean }[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'discover', label: 'Discover', icon: Compass },
+  { id: 'search', label: 'Search', icon: Search },
   { id: 'library', label: 'Library', icon: Library },
   { id: 'messages', label: 'Messages', icon: MessageCircle, notify: true },
   { id: 'profile', label: 'Profile', icon: User, notify: true },
