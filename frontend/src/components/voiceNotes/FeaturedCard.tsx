@@ -15,9 +15,11 @@ interface FeaturedCardProps {
   rotation?: number;
   /** render the card partially hidden behind the previous one */
   cascade?: boolean;
+  /** override the click behaviour (e.g. navigate elsewhere on the landing page) */
+  onActivate?: () => void;
 }
 
-export function FeaturedCard({ note, queue, rotation = 0, cascade = false }: FeaturedCardProps) {
+export function FeaturedCard({ note, queue, rotation = 0, cascade = false, onActivate }: FeaturedCardProps) {
   const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
   const creator = getCreator(note.creatorId);
 
@@ -26,9 +28,10 @@ export function FeaturedCard({ note, queue, rotation = 0, cascade = false }: Fea
   const liked = isLiked(note.id);
 
   const activate = useCallback(() => {
+    if (onActivate) return onActivate();
     if (isCurrent) toggle();
     else play(note, queue);
-  }, [isCurrent, note, queue, play, toggle]);
+  }, [onActivate, isCurrent, note, queue, play, toggle]);
 
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
