@@ -1,0 +1,164 @@
+.creator-rail {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px 4px 10px;
+  scroll-snap-type: x proximity;
+}
+
+.creator-cell {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 84px;
+  scroll-snap-align: start;
+}
+
+.creator-cell__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  border-radius: 18px;
+  padding: 8px 6px 6px;
+  width: 100%;
+  transition: background var(--dur-fast) ease;
+}
+
+.creator-cell__main:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.creator-cell.is-selected .creator-cell__main {
+  background: rgba(159, 212, 232, 0.08);
+}
+
+.creator-cell__avatar {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  padding: 2px;
+  transition: box-shadow var(--dur-fast) ease;
+}
+
+.creator-cell__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.6);
+}
+
+/* followed: thin tint ring; selected: stronger ring */
+.creator-cell__avatar.is-followed {
+  background: conic-gradient(from 210deg, transparent 0 72%, var(--tint, var(--accent)) 72% 100%);
+  padding: 2px;
+}
+
+.creator-cell.is-selected .creator-cell__avatar {
+  box-shadow: 0 0 0 2px var(--accent), 0 6px 18px -6px var(--accent-glow);
+}
+
+.creator-cell__name {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.creator-cell__meta {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: -4px;
+  white-space: nowrap;
+}
+
+/* subtle live equalizer on the avatar of whoever is playing */
+.creator-cell__live {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: none;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 15px;
+  padding: 2px 3px;
+  border-radius: 999px;
+  background: rgba(10, 10, 12, 0.85);
+  border: 1px solid var(--line-strong);
+}
+
+.creator-cell__avatar.is-live .creator-cell__live {
+  display: inline-flex;
+}
+
+.creator-cell__live i {
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: creator-eq 0.9s ease-in-out infinite alternate;
+}
+
+.creator-cell__live i:nth-child(1) { height: 60%; animation-delay: 0s; }
+.creator-cell__live i:nth-child(2) { height: 100%; animation-delay: 0.22s; }
+.creator-cell__live i:nth-child(3) { height: 45%; animation-delay: 0.11s; }
+
+@keyframes creator-eq {
+  from { transform: scaleY(0.4); }
+  to { transform: scaleY(1); }
+}
+
+/* follow pill */
+
+.follow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: var(--r-pill);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  transition:
+    color var(--dur-fast) ease,
+    background var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.follow-pill:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.09);
+  transform: translateY(-1px);
+}
+
+.follow-pill.is-following {
+  color: var(--ok);
+  background: rgba(126, 226, 184, 0.09);
+  border-color: rgba(126, 226, 184, 0.3);
+}
+
+.follow-pill.is-following:hover {
+  color: var(--pink);
+  background: rgba(245, 110, 160, 0.08);
+  border-color: rgba(245, 110, 160, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .creator-cell__live i,
+  .creator-cell__avatar {
+    animation: none;
+  }
+
+  .follow-pill {
+    transition: none;
+  }
+}

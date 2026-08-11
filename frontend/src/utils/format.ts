@@ -24,3 +24,22 @@ export function formatReleaseDate(iso: string): string {
     return '';
   }
 }
+
+/**
+ * 2026-08-11T07:30:00Z -> "4 hr ago" / "Yesterday" / "3 days ago" / "Aug 3".
+ * `now` can be supplied so mock feeds stay deterministic.
+ */
+export function formatRelative(iso: string, now: number = Date.now()): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diff = Math.max(0, now - then);
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hr ago`;
+  const day = Math.floor(hr / 24);
+  if (day === 1) return 'Yesterday';
+  if (day < 7) return `${day} days ago`;
+  return formatReleaseDate(iso);
+}

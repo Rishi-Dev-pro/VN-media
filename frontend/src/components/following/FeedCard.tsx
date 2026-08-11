@@ -1,0 +1,125 @@
+import { MessageCircle, Pause, Play } from 'lucide-react';
+import { useCallback } from 'react';
+import type { VoiceNote } from '../../data/types';
+import { getCreator } from '../../data/mockCreators';
+import { DEMO_NOW } from '../../data/mockFollowing';
+import { usePlayer } from '../../state/PlayerContext';
+import { formatCount, formatRelative, formatTime } from '../../utils/format';
+import { Avatar } from '../common/Avatar';
+import { Equalizer } from '../common/Equalizer';
+import { LikeButton } from '../common/LikeButton';
+import { MoreMenu } from '../common/MoreMenu';
+import './FeedCard.css';
+
+const NEW_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+interface FeedCardProps {
+  note: VoiceNote;
+  queue: VoiceNote[];
+  index: number;
+}
+
+export function FeedCard({ note, queue, index }: FeedCardProps) {
+  const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
+
+  const creator = getCreator(note.creatorId);
+
+  const isCurrent = current?.id === note.id;
+  const playing = isCurrent && isPlaying;
+  const liked = isLiked(note.id);
+  const isNew = DEMO_NOW - +new Date(note.releasedAt) <= NEW_WINDOW_MS;
+
+  const activate = useCallback(() => {
+    if (isCurrent) toggle();
+    else play(note, queue);
+  }, [isCurrent, note, queue, play, toggle]);
+
+  return (
+    <article
+      className={`feed-card ${playing ? 'is-playing' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={activate}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activate();
+        }
+      }}
+      aria-label={`${note.title} by ${creator.name} — ${playing ? 'pause' : 'play'}`}
+      style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+    >
+      <span className="feed-card__art">
+        <img src={note.cover} alt="" loading={index < 3 ? 'eager' : 'lazy'} width={128} height={128} />
+        <span className="feed-card__art-hint" aria-hidden="true">
+          {playing ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
+        </span>
+        <Equalizer playing={playing} bars={4} className="feed-card__art-eq" />
+      </span>
+
+      <span className="feed-card__body">
+        <span className="feed-card__topline">
+          <span className="feed-card__tag micro">{note.category}</span>
+          {isNew && <span className="feed-card__new micro">●&nbsp; New</span>}
+          <span className="feed-card__time micro tabular">{formatRelative(note.releasedAt, DEMO_NOW)}</span>
+        </span>
+
+        <span className="feed-card__title">{note.title}</span>
+
+        <span className="feed-card__creator">
+          <Avatar src={creator.avatar} alt={creator.name} size={20} />
+          <span className="feed-card__handle">@{creator.handle}</span>
+        </span>
+
+        <span className="feed-card__desc">{note.description}</span>
+
+        <span className="feed-card__tags" aria-hidden="true">
+          {note.tags.slice(0, 3).map((t) => (
+            <span key={t} className="feed-card__tag-pill">
+              #{t}
+            </span>
+          ))}
+        </span>
+
+        <span className="feed-card__meta">
+          <span className="feed-card__play">
+            {playing ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+            <span className="tabular">{formatTime(note.duration)}</span>
+          </span>
+
+          <span
+            className="feed-card__actions"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            <LikeButton
+              liked={liked}
+              count={note.likes + (liked ? 1 : 0)}
+              label={note.title}
+              className="feed-card__like"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleLike(note.id);
+              }}
+            />
+            <button
+              type="button"
+              className="feed-card__comments"
+              aria-label={`${note.comments} comments on ${note.title}`}
+              title="Discussions arrive in a later phase"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.currentTarget.blur();
+              }}
+            >
+              <MessageCircle size={16} aria-hidden="true" />
+              <span className="tabular">{formatCount(note.comments)}</span>
+            </button>
+            <MoreMenu itemLabel={note.title} align="right" />
+          </span>
+        </span>
+      </span>
+    </article>
+  );
+}
