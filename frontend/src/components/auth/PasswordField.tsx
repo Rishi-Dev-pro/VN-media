@@ -11,6 +11,9 @@ interface PasswordFieldProps
   onChange: (value: string) => void;
   error?: string | null;
   valid?: boolean;
+  /** accessible labels for the visibility toggle (e.g. confirm field) */
+  showLabel?: string;
+  hideLabel?: string;
 }
 
 export function PasswordField({
@@ -20,6 +23,8 @@ export function PasswordField({
   onChange,
   error,
   valid,
+  showLabel = 'Show password',
+  hideLabel = 'Hide password',
   ...rest
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
@@ -37,7 +42,7 @@ export function PasswordField({
         <button
           type="button"
           className="field__toggle"
-          aria-label={visible ? 'Hide password' : 'Show password'}
+          aria-label={visible ? hideLabel : showLabel}
           aria-pressed={visible}
           onClick={() => setVisible((v) => !v)}
         >

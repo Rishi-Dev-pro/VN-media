@@ -19,8 +19,15 @@ export type AuthResult =
   | { ok: true; user: AuthUser }
   | { ok: false; error: string };
 
+export interface RegisterInput {
+  username: string;
+  email: string;
+  password: string;
+}
+
 export interface AuthRepository {
   signIn(email: string, password: string): Promise<AuthResult>;
+  register(input: RegisterInput): Promise<AuthResult>;
 }
 
 /** Simulated network latency. */
@@ -49,6 +56,29 @@ export const mockAuthRepository: AuthRepository = {
       user: {
         handle: 'you',
         name: 'You',
+        avatar: '/images/portrait-7.jpg',
+      },
+    };
+  },
+
+  async register({ username, email, password }) {
+    await delay(1200);
+    void email;
+    void password;
+
+    // `taken` intentionally fails so the error UI can be demonstrated.
+    if (username.toLowerCase() === 'taken') {
+      return {
+        ok: false,
+        error: "We couldn't create your account. Please try again.",
+      };
+    }
+
+    return {
+      ok: true,
+      user: {
+        handle: username.toLowerCase(),
+        name: username,
         avatar: '/images/portrait-7.jpg',
       },
     };

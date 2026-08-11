@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 
 interface AuthShellProps {
   children: ReactNode;
+  /** `register` mirrors the layout and swaps visual/form order. */
+  variant?: 'login' | 'register';
 }
 
-export default function AuthShell({ children }: AuthShellProps) {
+export default function AuthShell({ children, variant = 'login' }: AuthShellProps) {
   return (
-    <div className="auth-shell">
+    <div className={`auth-shell${variant === 'register' ? ' auth-shell--register' : ''}`}>
       <div className="bg" aria-hidden="true">
         <span className="bg-streak" />
         <svg className="bg-noise" xmlns="http://www.w3.org/2000/svg">

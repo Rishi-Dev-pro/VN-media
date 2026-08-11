@@ -1,5 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
-import { createAuthRepository } from '../services/authRepository';
+import {
+  createAuthRepository,
+  type RegisterInput,
+} from '../services/authRepository';
 
 const repo = createAuthRepository();
 
@@ -11,6 +14,8 @@ interface UseAuth {
   error: string | null;
   /** submit credentials; resolves true when the demo sign-in succeeded */
   signIn: (email: string, password: string) => Promise<boolean>;
+  /** submit registration details; resolves true when the demo registration succeeded */
+  register: (input: RegisterInput) => Promise<boolean>;
   reset: () => void;
 }
 
@@ -41,10 +46,28 @@ export function useAuth(): UseAuth {
     return false;
   }, []);
 
+  const register = useCallback(async (input: RegisterInput) => {
+    if (inFlight.current) return false;
+    inFlight.current = true;
+    setStatus('submitting');
+    setError(null);
+
+    const result = await repo.register(input);
+
+    inFlight.current = false;
+    if (result.ok) {
+      setStatus('success');
+      return true;
+    }
+    setStatus('error');
+    setError(result.error);
+    return false;
+  }, []);
+
   const reset = useCallback(() => {
     setStatus('idle');
     setError(null);
   }, []);
 
-  return { status, error, signIn, reset };
+  return { status, error, signIn, register, reset };
 }
