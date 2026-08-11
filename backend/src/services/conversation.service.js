@@ -90,13 +90,26 @@ class ConversationService {
     }
 
     const isAudio = msgObj.messageType === 'audio';
+    const convId = msgObj.conversationId
+      ? (msgObj.conversationId._id || msgObj.conversationId).toString()
+      : null;
+    const msgId = msgObj._id ? msgObj._id.toString() : msgObj.id;
+
+    let publicAudioUrl = null;
+    if (isAudio && !isDeleted && convId && msgId) {
+      if (typeof msgObj.audioUrl === 'string' && msgObj.audioUrl.startsWith('/api/conversations/')) {
+        publicAudioUrl = msgObj.audioUrl;
+      } else {
+        publicAudioUrl = `/api/conversations/${convId}/messages/${msgId}/audio`;
+      }
+    }
 
     return {
-      id: msgObj._id ? msgObj._id.toString() : msgObj.id,
-      conversationId: msgObj.conversationId ? msgObj.conversationId.toString() : null,
+      id: msgId,
+      conversationId: convId,
       content: isDeleted ? '[deleted]' : (isAudio ? null : (msgObj.content || null)),
       messageType: msgObj.messageType || 'text',
-      audioUrl: isDeleted ? null : (msgObj.audioUrl || null),
+      audioUrl: isDeleted ? null : publicAudioUrl,
       duration: isDeleted ? null : (typeof msgObj.duration === 'number' ? msgObj.duration : null),
       mimeType: isDeleted ? null : (msgObj.mimeType || null),
       fileSize: isDeleted ? null : (typeof msgObj.fileSize === 'number' ? msgObj.fileSize : null),

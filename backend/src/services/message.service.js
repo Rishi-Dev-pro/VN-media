@@ -109,6 +109,85 @@ class MessageService {
   }
 
   /**
+   * Get audio streaming metadata for an audio message inside a conversation.
+   * Verifies authentication, conversation membership, message ownership, audio type, non-deleted state, and storage existence.
+   */
+  async getAudioMessageStreamInfo({ conversationId, messageId, currentUserId }) {
+    if (!currentUserId || !mongoose.Types.ObjectId.isValid(currentUserId.toString())) {
+      const err = new Error('Authentication required');
+      err.statusCode = 401;
+      throw err;
+    }
+
+    if (!conversationId || !mongoose.Types.ObjectId.isValid(conversationId.toString())) {
+      const err = new Error('Conversation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (!messageId || !mongoose.Types.ObjectId.isValid(messageId.toString())) {
+      const err = new Error('Message not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      const err = new Error('Conversation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (!conversationService.isParticipant(conversation, currentUserId)) {
+      const err = new Error('Conversation not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const message = await Message.findOne({ _id: messageId, conversationId });
+    if (!message) {
+      const err = new Error('Message not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (message.messageType !== 'audio') {
+      const err = new Error('Message is not an audio message');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (message.deletedAt) {
+      const err = new Error('Message not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const fileExists = await storageService.fileExists(message.audioUrl);
+    if (!fileExists) {
+      const err = new Error('Audio file not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    let fileSize = message.fileSize;
+    try {
+      const stats = await storageService.getFileStats(message.audioUrl);
+      if (stats && typeof stats.size === 'number') {
+        fileSize = stats.size;
+      }
+    } catch {}
+
+    const mimeType = message.mimeType || 'audio/mpeg';
+
+    return {
+      fileSize,
+      mimeType,
+      audioUrl: message.audioUrl,
+    };
+  }
+
+  /**
    * Send a text message inside a 1-to-1 conversation.
    * Updates conversation lastMessageAt and lastMessageId, and emits message:new to recipient socket room.
    */

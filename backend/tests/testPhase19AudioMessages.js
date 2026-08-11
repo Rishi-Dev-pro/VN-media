@@ -175,13 +175,13 @@ const runTests = async () => {
       'Test 2: Audio message response contains valid audioUrl, duration, mimeType, and fileSize'
     );
 
-    // Test 3: Audio file exists in storage at storageRef
-    const fileExists3 = await storageService.fileExists(audioMsg1.audioUrl);
-    assert(fileExists3 === true, 'Test 3: Audio file exists in storage at storageRef');
-
-    // Test 4: Database audio reference points to valid storage reference
+    // Test 3: Audio file exists in storage at DB storageRef
     const msgDoc4 = await Message.findById(audioMsg1.id);
-    assert(msgDoc4 && msgDoc4.audioUrl === audioMsg1.audioUrl, 'Test 4: DB audioUrl matches storageRef');
+    const fileExists3 = await storageService.fileExists(msgDoc4.audioUrl);
+    assert(fileExists3 === true, 'Test 3: Audio file exists in storage at DB storageRef');
+
+    // Test 4: Database audio reference points to valid storage reference and client audioUrl exposes streaming route
+    assert(msgDoc4 && msgDoc4.audioUrl && audioMsg1.audioUrl.startsWith('/api/conversations/'), 'Test 4: DB audioUrl points to storage reference and API exposes streaming endpoint');
 
     // Test 5: Correct duration is extracted and stored
     assert(msgDoc4.duration >= 1.4, 'Test 5: Correct duration extracted and stored in DB');
@@ -447,7 +447,7 @@ const runTests = async () => {
 
     // Test 32: Message document structure remains intact in DB (deletedAt != null)
     const msgDoc32 = await Message.findById(audioMsg1.id);
-    assert(msgDoc32 && msgDoc32.deletedAt !== null && msgDoc32.audioUrl === audioMsg1.audioUrl, 'Test 32: Message document structure remains intact in DB with deletedAt timestamp');
+    assert(msgDoc32 && msgDoc32.deletedAt !== null && msgDoc32.audioUrl, 'Test 32: Message document structure remains intact in DB with deletedAt timestamp');
 
     // Test 33: Repeated deletion is idempotent (200 OK)
     const delRes33 = await fetch(`${BASE_URL}/conversations/${convABId}/messages/${audioMsg1.id}`, {

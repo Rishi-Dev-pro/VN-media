@@ -16,6 +16,7 @@ router.get('/:id', conversationController.getConversationById);
 // Message endpoints
 router.post('/:id/messages', conversationController.sendMessage);
 router.post('/:id/messages/audio', uploadSingleAudio, conversationController.sendAudioMessage);
+router.get('/:id/messages/:messageId/audio', conversationController.streamAudioMessage);
 router.get('/:id/messages', conversationController.getMessageHistory);
 router.patch('/:id/read', conversationController.markRead);
 router.delete('/:id/messages/:messageId', conversationController.deleteMessage);
