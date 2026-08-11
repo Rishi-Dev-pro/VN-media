@@ -1,14 +1,16 @@
 import { Clock3, Compass, Radio } from 'lucide-react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../components/common/Avatar';
 import { EmptyState } from '../components/common/EmptyState';
 import { TagPill } from '../components/common/TagPill';
+import { CommentsDrawer } from '../components/comments/CommentsDrawer';
 import { AlbumCard } from '../components/search/AlbumCard';
 import { CreatorResult } from '../components/search/CreatorResult';
 import { SearchInput } from '../components/search/SearchInput';
 import { SearchSuggestions } from '../components/search/SearchSuggestions';
 import { FeedCard } from '../components/voiceNotes/FeedCard';
+import type { VoiceNote } from '../data/types';
 import { mockCreators } from '../data/mockCreators';
 import { mockTagCatalog } from '../data/mockTags';
 import { useSearch } from '../hooks/useSearch';
@@ -31,6 +33,7 @@ const SUGGESTED_CREATORS = [...mockCreators].sort((a, b) => b.followers - a.foll
 export default function SearchPage() {
   const search = useSearch();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
 
   const { query, setQuery, filter, setFilter, status, results, suggestions } = search;
 
@@ -124,6 +127,8 @@ export default function SearchPage() {
         </div>
       )}
 
+      <CommentsDrawer note={commentsNote} onClose={() => setCommentsNote(null)} />
+
       {/* ---- live region for assistive tech ---- */}
       <p className="sr-only" role="status" aria-live="polite">
         {announce}
@@ -152,13 +157,19 @@ export default function SearchPage() {
           {showSkeletons ? (
             <ResultsSkeleton />
           ) : filter === 'all' ? (
-            <AllResults search={search} />
+            <AllResults search={search} onOpenComments={setCommentsNote} />
           ) : filter === 'voiceNotes' ? (
             <section aria-label="VoiceNote results">
               {results.voiceNotes.length > 0 ? (
                 <div className="search-note-list">
                   {results.voiceNotes.map((n, i) => (
-                    <FeedCard key={n.id} note={n} queue={results.voiceNotes} index={i} />
+                    <FeedCard
+                      key={n.id}
+                      note={n}
+                      queue={results.voiceNotes}
+                      index={i}
+                      onOpenComments={setCommentsNote}
+                    />
                   ))}
                 </div>
               ) : (
@@ -296,7 +307,13 @@ function DiscoveryState({ search }: { search: ReturnType<typeof useSearch> }) {
    ALL TAB — grouped sections
    ============================================================ */
 
-function AllResults({ search }: { search: ReturnType<typeof useSearch> }) {
+function AllResults({
+  search,
+  onOpenComments,
+}: {
+  search: ReturnType<typeof useSearch>;
+  onOpenComments: (note: VoiceNote) => void;
+}) {
   const { results, query } = search;
   if (results.total === 0) return <NoResults query={query} />;
 
@@ -307,7 +324,13 @@ function AllResults({ search }: { search: ReturnType<typeof useSearch> }) {
           <h2 className="search-section-title">VoiceNotes</h2>
           <div className="search-note-list">
             {results.voiceNotes.map((n, i) => (
-              <FeedCard key={n.id} note={n} queue={results.voiceNotes} index={i} />
+              <FeedCard
+                key={n.id}
+                note={n}
+                queue={results.voiceNotes}
+                index={i}
+                onOpenComments={onOpenComments}
+              />
             ))}
           </div>
         </section>

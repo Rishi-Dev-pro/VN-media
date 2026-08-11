@@ -210,7 +210,7 @@ export const mockVoiceNotes: VoiceNote[] = [
       'Five minutes of unfiltered thoughts before the kettle boils. Today: why the quietest hour is the loudest one.',
     cover: '/images/hero-headphones.jpg',
     duration: 296,
-    plays: 12800,
+    plays: 92000,
     likes: 2100,
     comments: 74,
     tags: ['journal', 'morning', 'thoughts'],

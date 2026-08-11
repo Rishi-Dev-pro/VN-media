@@ -17,9 +17,11 @@ interface FeedCardProps {
   note: VoiceNote;
   queue: VoiceNote[];
   index: number;
+  /** open the comments UI for this note (optional — pages opt in) */
+  onOpenComments?: (note: VoiceNote) => void;
 }
 
-export function FeedCard({ note, queue, index }: FeedCardProps) {
+export function FeedCard({ note, queue, index, onOpenComments }: FeedCardProps) {
   const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
 
   const creator = getCreator(note.creatorId);
@@ -107,10 +109,10 @@ export function FeedCard({ note, queue, index }: FeedCardProps) {
               type="button"
               className="feed-card__comments"
               aria-label={`${note.comments} comments on ${note.title}`}
-              title="Discussions arrive in a later phase"
+              title="View comments"
               onClick={(e) => {
                 e.stopPropagation();
-                e.currentTarget.blur();
+                onOpenComments?.(note);
               }}
             >
               <MessageCircle size={16} aria-hidden="true" />

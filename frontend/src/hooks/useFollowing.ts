@@ -12,6 +12,8 @@ const repo = createFollowingRepository();
 
 export type FeedFilter = 'all' | 'recent' | 'creators';
 
+export type FeedSort = 'latest' | 'liked' | 'played';
+
 /** Window used by the RECENT filter (hours). */
 const RECENT_WINDOW_MS = 72 * 60 * 60 * 1000;
 
@@ -27,6 +29,9 @@ export interface UseFollowing {
   isFollowing: (creatorId: string) => boolean;
   filter: FeedFilter;
   setFilter: (f: FeedFilter) => void;
+  /** ordering of the feed within the active filter */
+  sort: FeedSort;
+  setSort: (s: FeedSort) => void;
   /** creator filter (\"all from @handle\") */
   selectedCreator: string | null;
   selectCreator: (creatorId: string | null) => void;
@@ -48,6 +53,7 @@ export function useFollowing(): UseFollowing {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<FeedFilter>('all');
+  const [sort, setSort] = useState<FeedSort>('latest');
   const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -85,8 +91,18 @@ export function useFollowing(): UseFollowing {
       const cutoff = DEMO_NOW - RECENT_WINDOW_MS;
       list = list.filter((n) => +new Date(n.releasedAt) >= cutoff);
     }
+    // the repository returns newest-first; other orders re-sort stably
+    if (sort === 'liked') {
+      list = [...list].sort(
+        (a, b) => b.likes - a.likes || +new Date(b.releasedAt) - +new Date(a.releasedAt),
+      );
+    } else if (sort === 'played') {
+      list = [...list].sort(
+        (a, b) => b.plays - a.plays || +new Date(b.releasedAt) - +new Date(a.releasedAt),
+      );
+    }
     return list;
-  }, [notes, selectedCreator, filter]);
+  }, [notes, selectedCreator, filter, sort]);
 
   const retry = useCallback(() => {
     void load();
@@ -103,6 +119,8 @@ export function useFollowing(): UseFollowing {
     isFollowing,
     filter,
     setFilter,
+    sort,
+    setSort,
     selectedCreator,
     selectCreator,
     visibleNotes,

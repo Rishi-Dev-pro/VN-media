@@ -1,13 +1,15 @@
-import { Compass, Radio, Users, X } from 'lucide-react';
-import { useMemo } from 'react';
+import { Check, ChevronDown, Compass, Radio, Users, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CirclePanel } from '../components/following/CirclePanel';
 import { CreatorRail } from '../components/following/CreatorRail';
+import { CommentsDrawer } from '../components/comments/CommentsDrawer';
 import { FeedCard } from '../components/voiceNotes/FeedCard';
 import { EmptyState } from '../components/common/EmptyState';
+import type { VoiceNote } from '../data/types';
 import { getCreator } from '../data/mockCreators';
 import { DEMO_LISTENER } from '../data/mockFollowing';
-import { useFollowing, type FeedFilter } from '../hooks/useFollowing';
+import { useFollowing, type FeedFilter, type FeedSort } from '../hooks/useFollowing';
 import { formatCount } from '../utils/format';
 import './FollowingPage.css';
 
@@ -27,11 +29,15 @@ export default function FollowingPage() {
     toggleFollow,
     filter,
     setFilter,
+    sort,
+    setSort,
     selectedCreator,
     selectCreator,
     visibleNotes,
     newThisWeek,
   } = useFollowing();
+
+  const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
 
   const selectedCreatorObj = useMemo(
     () => (selectedCreator ? getCreator(selectedCreator) : null),
@@ -121,6 +127,8 @@ export default function FollowingPage() {
             })}
           </div>
 
+          <SortMenu sort={sort} onSort={setSort} />
+
           {selectedCreatorObj ? (
             <button
               type="button"
@@ -186,7 +194,13 @@ export default function FollowingPage() {
         ) : (
           <div className="following-feed-list">
             {visibleNotes.map((note, i) => (
-              <FeedCard key={note.id} note={note} queue={visibleNotes} index={i} />
+              <FeedCard
+                key={note.id}
+                note={note}
+                queue={visibleNotes}
+                index={i}
+                onOpenComments={setCommentsNote}
+              />
             ))}
           </div>
         )}
@@ -198,6 +212,74 @@ export default function FollowingPage() {
         newThisWeek={newThisWeek}
         feedCount={visibleNotes.length}
       />
+
+      <CommentsDrawer note={commentsNote} onClose={() => setCommentsNote(null)} />
+    </div>
+  );
+}
+
+/* ---------- sort control ---------- */
+
+const SORTS: { id: FeedSort; label: string }[] = [
+  { id: 'latest', label: 'Latest' },
+  { id: 'liked', label: 'Most liked' },
+  { id: 'played', label: 'Recently played' },
+];
+
+function SortMenu({ sort, onSort }: { sort: FeedSort; onSort: (s: FeedSort) => void }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const label = SORTS.find((s) => s.id === sort)?.label ?? 'Latest';
+
+  return (
+    <div ref={rootRef} className="sort-menu">
+      <button
+        type="button"
+        className="sort-menu__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {label}
+        <ChevronDown size={13} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="sort-menu__pop" role="listbox" aria-label="Sort the feed">
+          {SORTS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="option"
+              aria-selected={sort === s.id}
+              className={`sort-menu__item ${sort === s.id ? 'is-active' : ''}`}
+              onClick={() => {
+                onSort(s.id);
+                setOpen(false);
+              }}
+            >
+              <span>{s.label}</span>
+              {sort === s.id && <Check size={13} aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
