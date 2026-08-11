@@ -35,6 +35,6 @@ const VIEW_IDS: readonly string[] = [
 
 /** Map a location pathname to the matching app view. */
 export function pathToView(pathname: string): View {
-  const seg = pathname.replace(/^\//, '');
+  const seg = pathname.replace(/^\//, '').split('/')[0];
   return VIEW_IDS.includes(seg) ? (seg as View) : 'discover';
 }

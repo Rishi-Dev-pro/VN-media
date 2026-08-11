@@ -1,0 +1,166 @@
+/* ============================================================
+   ALBUM GRID CARD — record-sleeve language, shared with
+   the Discover cards: dark translucent surface, notch hole,
+   restrained glow, editorial metadata.
+   ============================================================ */
+
+.album-card-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 12px 14px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(168deg, rgba(28, 28, 34, 0.72), rgba(17, 17, 22, 0.86));
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) ease;
+  animation: page-in var(--dur-med) var(--ease-out) backwards;
+}
+
+.album-card-v2:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-float);
+}
+
+.album-card-v2:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- artwork ---- */
+
+.album-card-v2__art {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 14px 14px 10px 10px;
+  overflow: hidden;
+  background: var(--surface-3);
+}
+
+.album-card-v2__art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 28%;
+  transition: transform var(--dur-slow) var(--ease-out);
+  /* record-sleeve hole, same language as Discover cards */
+  -webkit-mask-image: radial-gradient(circle at 50% 20px, transparent 0 11px, #000 11.6px 100%);
+  mask-image: radial-gradient(circle at 50% 20px, transparent 0 11px, #000 11.6px 100%);
+}
+
+.album-card-v2:hover .album-card-v2__art img {
+  transform: scale(1.045);
+}
+
+.album-card-v2__notch {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.65), inset 0 1px 5px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.album-card-v2__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(8, 8, 10, 0.6) 100%);
+  z-index: 1;
+}
+
+.album-card-v2__count {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: var(--r-pill);
+  color: var(--text-2);
+  background: rgba(10, 10, 12, 0.66);
+  border: 1px solid var(--line-strong);
+  letter-spacing: 0.04em;
+}
+
+.album-card-v2__play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: #0e1014;
+  background: linear-gradient(160deg, var(--accent-strong), var(--accent));
+  box-shadow: 0 10px 24px -8px var(--accent-glow);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) ease;
+}
+
+.album-card-v2:hover .album-card-v2__play,
+.album-card-v2:focus-visible .album-card-v2__play {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.album-card-v2__play:hover {
+  box-shadow: 0 12px 28px -6px var(--accent-glow);
+}
+
+.album-card-v2__play:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* ---- meta ---- */
+
+.album-card-v2__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+.album-card-v2__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-card-v2__creator {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 768px) {
+  .album-card-v2 {
+    padding: 14px 14px 16px;
+  }
+}

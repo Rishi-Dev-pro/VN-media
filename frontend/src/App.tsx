@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import FollowingPage from './pages/FollowingPage';
 import SearchPage from './pages/SearchPage';
+import AlbumsPage from './pages/AlbumsPage';
+import AlbumDetailPage from './pages/AlbumDetailPage';
 import LandingPage from './pages/landing/LandingPage';
 import { FollowProvider } from './state/FollowContext';
 import { PlayerProvider } from './state/PlayerContext';
@@ -23,7 +25,6 @@ function ScrollToTop() {
 
 /** App views that render elegant placeholders until their phase lands. */
 const PLACEHOLDER_VIEWS: View[] = [
-  'albums',
   'creators',
   'library',
   'messages',
@@ -44,6 +45,8 @@ export default function App() {
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/following" element={<FollowingPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/albums" element={<AlbumsPage />} />
+          <Route path="/albums/:id" element={<AlbumDetailPage />} />
           {PLACEHOLDER_VIEWS.map((v) => (
             <Route key={v} path={`/${v}`} element={<PlaceholderPage view={v} />} />
           ))}

@@ -6,6 +6,15 @@ export function formatTime(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
 }
 
+/** 2850 -> "48 min", 4310 -> "1 hr 12 min" */
+export function formatMinutes(totalSeconds: number): string {
+  const m = Math.max(0, Math.round(totalSeconds / 60));
+  if (m < 60) return `${m} min`;
+  const hr = Math.floor(m / 60);
+  const r = m % 60;
+  return r === 0 ? `${hr} hr` : `${hr} hr ${r} min`;
+}
+
 /** 12800 -> "12.8k", 48200 -> "48.2k", 153000 -> "153k" */
 export function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}m`;

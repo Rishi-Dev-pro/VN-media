@@ -52,6 +52,10 @@ export interface Album {
   cover: string;
   voiceNoteIds: string[];
   year: number;
+  /** Featured in the album discovery hero */
+  featured?: boolean;
+  /** Public by default; future phases may add follower-only albums */
+  visibility?: 'public' | 'followers';
 }
 
 export interface Tag {

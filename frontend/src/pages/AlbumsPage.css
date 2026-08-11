@@ -1,0 +1,193 @@
+/* ============================================================
+   ALBUMS DISCOVERY — VOICES, CURATED INTO STORIES.
+   Same world as Discover / Following: editorial heading,
+   cinematic featured block, restrained grid.
+   ============================================================ */
+
+.albums {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(44px, 7vh, 76px);
+}
+
+/* ---- editorial header ---- */
+
+.albums-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px 28px;
+  padding-top: 10px;
+}
+
+.albums-head__eyebrow {
+  color: var(--accent);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.albums-head__title {
+  margin-top: 14px;
+  font-size: clamp(2.2rem, 6.4vw, 4.4rem);
+  line-height: 0.99;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+}
+
+.albums-head__title .text-ghost {
+  -webkit-text-stroke: 1.4px rgba(244, 244, 246, 0.5);
+}
+
+.albums-head__sub {
+  margin-top: 18px;
+  max-width: 460px;
+  font-size: var(--fs-body);
+  line-height: 1.65;
+  color: var(--text-2);
+}
+
+.albums-head__count {
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- featured section ---- */
+
+.albums-featured-sec {
+  position: relative;
+}
+
+.featured-album--skeleton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 38px;
+  align-items: center;
+  padding: clamp(22px, 4vw, 40px);
+  border-radius: 30px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.featured-album__sk-frame {
+  aspect-ratio: 4 / 5;
+  border-radius: 24px 24px 14px 14px;
+  width: min(100%, 420px);
+  margin-inline: auto;
+}
+
+.albums-sk-line {
+  height: 14px;
+  border-radius: 6px;
+}
+
+@media (min-width: 768px) {
+  .featured-album--skeleton {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 48px;
+  }
+
+  .featured-album__sk-frame {
+    margin-inline: 0;
+  }
+}
+
+/* ---- error state ---- */
+
+.albums-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: clamp(30px, 6vw, 56px);
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.albums-error h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.4vw, 2.2rem);
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.albums-error p {
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+/* ---- explore grid ---- */
+
+.albums-grid-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-head__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.6vw, 1.6rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.section-head__sub {
+  margin-top: 4px;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.section-head__meta {
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.albums-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 480px) {
+  .albums-grid {
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .albums-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+  }
+}
+
+/* skeleton card */
+
+.album-card-v2--skeleton {
+  cursor: default;
+  animation: none;
+}
+
+.album-card-v2--skeleton:hover {
+  transform: none;
+  border-color: var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+.album-card-v2__sk-art {
+  aspect-ratio: 1;
+  border-radius: 14px 14px 10px 10px;
+}
