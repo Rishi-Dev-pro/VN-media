@@ -264,7 +264,7 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 - **`Notification`** (`src/models/Notification.js`): In-app notifications (`recipientId`, `actorId`, `type`, `targetType`, `targetId`, `activityEventId`, `metadata`, `readAt`, `createdAt`).
 - **`NotificationPreference`** (`src/models/NotificationPreference.js`): User notification controls (`userId`, `userFollowed`, `voiceNoteLiked`, `voiceNoteCommented`, `createdAt`, `updatedAt`).
 
-### 11. Direct Messaging & Private Conversations (Phase 18, Phase 19 & Phase 20)
+### 11. Direct Messaging & Private Conversations (Phase 18, Phase 19, Phase 20 & Phase 21)
 - **`POST /api/conversations`**: Create or retrieve an existing 1-to-1 conversation with a target user (`userId`). Uses deterministic participant pairing (`[userA, userB].sort()`) and DB unique compound index. Auth required.
 - **`GET /api/conversations`**: Retrieve paginated list of conversations for current user (`?page=1&limit=20`), enriched with sanitized `otherParticipant`, `unreadCount`, and `lastMessage`. Auth required.
 - **`GET /api/conversations/:id`**: Retrieve details for a single conversation. Participant only. Auth required.
@@ -274,10 +274,11 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 - **`GET /api/conversations/:id/messages`**: Retrieve paginated message history (`?page=1&limit=50`). Formatted audio messages expose application endpoint `/api/conversations/:id/messages/:messageId/audio`. Participant only. Auth required.
 - **`PATCH /api/conversations/:id/read`**: Mark incoming unread messages as read by recipient. Auth required.
 - **`DELETE /api/conversations/:conversationId/messages/:messageId`**: Soft-delete owned message (`deletedAt = timestamp`). Sender only. Auth required.
+- **`AudioCleanupService`** (`src/services/audioCleanup.service.js`): Controlled internal audio storage lifecycle cleanup service (`cleanupDeletedAudioMessages`, `detectOrphanAudioFiles`). Manages configurable retention periods (`AUDIO_DELETED_RETENTION_DAYS`, default: 7 days), batched candidate selection, duplicate storage reference protection, physical file deletion, missing file handling, and orphan detection without hard-deleting Mongoose `Message` documents.
 
 ---
 
-## Data Models (Phase 1, Phase 6, Phase 7, Phase 8, Phase 10, Phase 11, Phase 12, Phase 14, Phase 15, Phase 16, Phase 17, Phase 18, Phase 19 & Phase 20)
+## Data Models (Phase 1, Phase 6, Phase 7, Phase 8, Phase 10, Phase 11, Phase 12, Phase 14, Phase 15, Phase 16, Phase 17, Phase 18, Phase 19, Phase 20 & Phase 21)
 
 - **`User`** (`src/models/User.js`): Accounts (`username`, `email`, `passwordHash`, `avatar`, `bio`, `timestamps`).
 - **`VoiceNote`** (`src/models/VoiceNote.js`): Audio metadata (`ownerId`, `title`, `description`, `tags`, `audioUrl`, `duration`, `visibility`, `deletedAt`, `timestamps`).
@@ -294,14 +295,13 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 
 ---
 
-## Current Status & Phase 20 Scope
+## Current Status & Phase 21 Scope
 
 > [!NOTE]
-> **Phase 0 through Phase 20 Status: COMPLETE.**
-> Private 1-to-1 direct messaging, deterministic participant pairing, text & audio messages (`messageType = 'audio'`), audio container signature validation (magic bytes), duration extraction, max file size & duration limits, storage failure rollback (no orphan files), authorization-aware private audio streaming (`GET /api/conversations/:id/messages/:messageId/audio`), HTTP byte range request parsing (`bytes=start-end`, `bytes=start-`, `bytes=-suffix`), `200 OK`, `206 Partial Content`, and `416 Range Not Satisfiable` HTTP responses, `Cache-Control` security, conversation listing with batched unread counts, recipient message read state updates, soft deletion (`deletedAt = timestamp`), real-time Socket.IO delivery (`message:new`), privacy boundaries, and regression safety are fully implemented and verified via 54 automated tests in `testPhase20AudioStreaming.js` (938 passing test cases across all phases).
+> **Phase 0 through Phase 21 Status: COMPLETE.**
+> Private 1-to-1 direct messaging, deterministic participant pairing, text & audio messages (`messageType = 'audio'`), audio container signature validation (magic bytes), duration extraction, max file size & duration limits, storage failure rollback (no orphan files), authorization-aware private audio streaming (`GET /api/conversations/:id/messages/:messageId/audio`), HTTP byte range request parsing (`bytes=start-end`, `bytes=start-`, `bytes=-suffix`), `200 OK`, `206 Partial Content`, and `416 Range Not Satisfiable` HTTP responses, `Cache-Control` security, configurable audio retention lifecycle (`AUDIO_DELETED_RETENTION_DAYS`, default: 7 days), `AudioCleanupService` batched file cleanup, idempotency, duplicate reference protection, orphan file detection, non-destructive Message document preservation, conversation listing with batched unread counts, recipient message read state updates, soft deletion (`deletedAt = timestamp`), real-time Socket.IO delivery (`message:new`), privacy boundaries, and regression safety are fully implemented and verified via 38 automated tests in `testPhase21AudioCleanup.js` (976 passing test cases across all phases).
 
 ### Intentionally NOT Implemented Yet (Belongs to Future Phases):
-- ❌ Permanent storage audio cleanup workers (Phase 21)
 - ❌ Offline audio download / media access (Phase 22)
 - ❌ Production hardening & final security audit (Phase 23)
 - ❌ Group chats / group audio messages
@@ -312,6 +312,5 @@ To connect via Socket.IO, supply the JWT token in `auth.token` (`Bearer <token>`
 
 ## Future Roadmap
 
-1. **Phase 21 — Audio Message Lifecycle & Storage Cleanup:** Permanent deletion, storage cleanup workers, and retention policy.
-2. **Phase 22 — Offline Download / Media Access Foundation:** Offline synchronization and media access APIs.
-3. **Phase 23 — Production Hardening, Security & Final Backend Audit:** Security hardening, rate limiting, final performance audit, and production deployment preparation.
+1. **Phase 22 — Offline Download / Media Access Foundation:** Offline synchronization and media access APIs.
+2. **Phase 23 — Production Hardening, Security & Final Backend Audit:** Security hardening, rate limiting, final performance audit, and production deployment preparation.

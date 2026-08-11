@@ -5,6 +5,8 @@ const dotenv = require('dotenv');
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 const maxAudioFileSizeMB = parseInt(process.env.MAX_AUDIO_FILE_SIZE_MB, 10) || 10;
+const parsedRetentionDays = parseInt(process.env.AUDIO_DELETED_RETENTION_DAYS, 10);
+const audioDeletedRetentionDays = (!isNaN(parsedRetentionDays) && parsedRetentionDays >= 0) ? parsedRetentionDays : 7;
 
 const config = {
   port: parseInt(process.env.PORT, 10) || 5000,
@@ -15,6 +17,7 @@ const config = {
   maxAudioFileSizeMB,
   maxAudioSizeBytes: maxAudioFileSizeMB * 1024 * 1024,
   audioStoragePath: process.env.AUDIO_STORAGE_PATH || 'storage/audio',
+  audioDeletedRetentionDays,
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV === 'development' || !process.env.NODE_ENV,
 };
