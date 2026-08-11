@@ -18,9 +18,17 @@ export interface Creator {
   /** Display name */
   name: string;
   avatar: string;
+  /** Large cinematic portrait for profile heroes */
+  heroImage?: string;
   bio: string;
   followers: number;
   following: number;
+  /** Topics / interests — shown on the profile About tab */
+  tags: string[];
+  /** ISO join date */
+  joinedAt: string;
+  /** Featured on the /creators discovery page */
+  featured?: boolean;
   /** Tiny per-creator tint used sparingly in the UI */
   tint: string;
 }

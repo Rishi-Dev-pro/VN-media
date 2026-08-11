@@ -1,6 +1,6 @@
 import { Disc3, Play, Sparkles } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { voiceNotesById } from '../../data/mockVoiceNotes';
 import type { AlbumSummary } from '../../services/albumRepository';
 import { usePlayer } from '../../state/PlayerContext';
@@ -61,13 +61,17 @@ export function FeaturedAlbum({ album }: FeaturedAlbumProps) {
         <h2 className="featured-album__title">{album.title}</h2>
         <p className="featured-album__desc">{album.description}</p>
 
-        <div className="featured-album__creator">
+        <Link
+          to={`/creators/${album.creatorHandle}`}
+          className="featured-album__creator"
+          aria-label={`View profile of ${album.creatorName}`}
+        >
           <Avatar src={album.creatorAvatar} alt={album.creatorName} size={34} />
           <span className="featured-album__creator-meta">
             <span className="featured-album__creator-name">{album.creatorName}</span>
             <span className="featured-album__creator-handle">@{album.creatorHandle}</span>
           </span>
-        </div>
+        </Link>
 
         <div className="featured-album__stats micro tabular">
           <span>{album.trackCount} VoiceNotes</span>

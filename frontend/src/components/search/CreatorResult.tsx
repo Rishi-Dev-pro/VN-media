@@ -1,5 +1,6 @@
 import { Check, Plus } from 'lucide-react';
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import type { Creator } from '../../data/types';
 import { notesByCreator } from '../../data/mockFollowing';
 import { useFollows } from '../../state/FollowContext';
@@ -20,14 +21,20 @@ export function CreatorResult({ creator, query }: CreatorResultProps) {
 
   return (
     <div className="creator-result">
-      <Avatar src={creator.avatar} alt={creator.name} size={48} />
-      <div className="creator-result__meta">
-        <span className="creator-result__handle">
-          {highlight(`@${creator.handle}`, query)}
+      <Link
+        to={`/creators/${creator.handle}`}
+        className="creator-result__link"
+        aria-label={`View profile of ${creator.name}`}
+      >
+        <Avatar src={creator.avatar} alt={creator.name} size={48} />
+        <span className="creator-result__meta">
+          <span className="creator-result__handle">
+            {highlight(`@${creator.handle}`, query)}
+          </span>
+          <span className="creator-result__name">{creator.name}</span>
+          <span className="creator-result__bio">{creator.bio}</span>
         </span>
-        <span className="creator-result__name">{creator.name}</span>
-        <span className="creator-result__bio">{creator.bio}</span>
-      </div>
+      </Link>
       <div className="creator-result__stats micro tabular">
         <span>{formatCount(creator.followers)} followers</span>
         <span>·</span>

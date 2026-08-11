@@ -321,6 +321,36 @@ export const mockVoiceNotes: VoiceNote[] = [
     tags: ['studio', 'lofi', 'session'],
     releasedAt: '2026-08-08T20:15:00Z',
   },
+  {
+    id: 'vn-harbor-whistle',
+    title: 'Harbor Whistle',
+    creatorId: 'crea-mira',
+    category: 'Field',
+    description:
+      'The five o’clock ferry horn, gulls, and someone practicing trumpet in a parked car. Recorded on the pier.',
+    cover: '/images/forest-light.jpg',
+    duration: 226,
+    plays: 3100,
+    likes: 520,
+    comments: 19,
+    tags: ['travel', 'harbor', 'field'],
+    releasedAt: '2026-08-05T17:30:00Z',
+  },
+  {
+    id: 'vn-waiting-room',
+    title: 'Waiting Room',
+    creatorId: 'crea-mira',
+    category: 'Talk',
+    description:
+      'Four strangers, one late train, and the conversations that only happen when everyone missed the same connection.',
+    cover: '/images/forest-mist.jpg',
+    duration: 301,
+    plays: 2700,
+    likes: 480,
+    comments: 23,
+    tags: ['trains', 'travel', 'stories'],
+    releasedAt: '2026-08-05T18:10:00Z',
+  },
 ];
 
 export const voiceNotesById: Record<string, VoiceNote> = Object.fromEntries(

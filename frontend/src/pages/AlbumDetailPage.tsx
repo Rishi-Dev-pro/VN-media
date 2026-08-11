@@ -144,7 +144,10 @@ export default function AlbumDetailPage() {
                 )}
               </button>
             )}
-            <Link to="/creators" className="album-detail__view-creator micro">
+            <Link
+              to={`/creators/${album.creatorHandle}`}
+              className="album-detail__view-creator micro"
+            >
               View creator <span aria-hidden="true">→</span>
             </Link>
           </div>

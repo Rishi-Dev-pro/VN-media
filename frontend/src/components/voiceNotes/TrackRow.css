@@ -115,6 +115,22 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: max-content;
+  max-width: 100%;
+  border-radius: var(--r-pill);
+  padding: 1px 6px 1px 0;
+  margin-left: -6px;
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+
+.track-row__handle:hover {
+  color: var(--accent-strong);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.track-row__handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .track-row__duration {

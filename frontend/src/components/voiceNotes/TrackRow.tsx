@@ -1,5 +1,6 @@
 import { MessageCircle } from 'lucide-react';
 import { useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import type { VoiceNote } from '../../data/types';
 import { getCreator } from '../../data/mockCreators';
 import { usePlayer } from '../../state/PlayerContext';
@@ -66,7 +67,14 @@ export function TrackRow({ note, queue, index, showComments }: TrackRowProps) {
             <Equalizer playing={playing} bars={3} className="track-row__eq" />
             <span className="track-row__title">{note.title}</span>
           </span>
-          <span className="track-row__handle">@{creator.handle}</span>
+          <Link
+            to={`/creators/${creator.handle}`}
+            className="track-row__handle"
+            aria-label={`View profile of ${creator.name}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            @{creator.handle}
+          </Link>
         </span>
 
         {showComments && (

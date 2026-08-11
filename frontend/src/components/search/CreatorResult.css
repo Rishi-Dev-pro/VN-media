@@ -15,6 +15,25 @@
   background: linear-gradient(165deg, rgba(32, 32, 39, 0.7), rgba(20, 20, 26, 0.85));
 }
 
+.creator-result__link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--r-md);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.creator-result__link:hover .creator-result__handle {
+  color: var(--accent-strong);
+}
+
+.creator-result__link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .creator-result__meta {
   flex: 1;
   min-width: 0;

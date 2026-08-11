@@ -120,6 +120,18 @@ export const mockAlbums: Album[] = [
     visibility: 'public',
   },
   {
+    id: 'alb-harbor-hours',
+    title: 'Harbor Hours',
+    creatorId: 'crea-mira',
+    description:
+      'Two recordings from the edge of the water — the ferry, the gulls, and the people who wait for both.',
+    cover: '/images/forest-light.jpg',
+    voiceNoteIds: ['vn-harbor-whistle', 'vn-waiting-room'],
+    year: 2026,
+    createdAt: '2026-08-06T08:00:00Z',
+    visibility: 'public',
+  },
+  {
     id: 'alb-rishi-drafts',
     title: 'Untitled Drafts',
     creatorId: 'crea-rishi',

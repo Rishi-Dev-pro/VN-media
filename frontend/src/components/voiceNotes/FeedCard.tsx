@@ -1,5 +1,6 @@
 import { MessageCircle, Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import type { VoiceNote } from '../../data/types';
 import { getCreator } from '../../data/mockCreators';
 import { DEMO_NOW } from '../../data/mockFollowing';
@@ -68,10 +69,15 @@ export function FeedCard({ note, queue, index, onOpenComments }: FeedCardProps) 
 
         <span className="feed-card__title">{note.title}</span>
 
-        <span className="feed-card__creator">
+        <Link
+          to={`/creators/${creator.handle}`}
+          className="feed-card__creator"
+          aria-label={`View profile of ${creator.name}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <Avatar src={creator.avatar} alt={creator.name} size={20} />
           <span className="feed-card__handle">@{creator.handle}</span>
-        </span>
+        </Link>
 
         <span className="feed-card__desc">{note.description}</span>
 

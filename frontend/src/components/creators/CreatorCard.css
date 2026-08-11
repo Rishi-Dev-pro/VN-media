@@ -1,0 +1,195 @@
+/* ============================================================
+   CREATOR CARD — portrait-first identity cards for /creators.
+   Same world as the album cards: dark translucent surface,
+   layered portrait, restrained glow, editorial meta.
+   ============================================================ */
+
+.creator-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 12px 14px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(168deg, rgba(28, 28, 34, 0.72), rgba(17, 17, 22, 0.86));
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) ease;
+  animation: page-in var(--dur-med) var(--ease-out) backwards;
+}
+
+.creator-card:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-float);
+}
+
+.creator-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- portrait ---- */
+
+.creator-card__portrait {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: 14px 14px 10px 10px;
+  overflow: hidden;
+  background: var(--surface-3);
+}
+
+.creator-card__portrait > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.creator-card:hover .creator-card__portrait > img {
+  transform: scale(1.05);
+}
+
+.creator-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 46%, rgba(8, 8, 10, 0.72) 100%);
+  z-index: 1;
+}
+
+.creator-card__avatar {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
+  display: inline-flex;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--surface-3);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tint, var(--accent)) 55%, transparent),
+    0 10px 22px -8px rgba(0, 0, 0, 0.8);
+  background: var(--surface-4);
+}
+
+.creator-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.creator-card__badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 5px 9px;
+  border-radius: var(--r-pill);
+  color: var(--accent-strong);
+  background: rgba(10, 10, 12, 0.6);
+  border: 1px solid rgba(159, 212, 232, 0.28);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  letter-spacing: 0.06em;
+}
+
+/* ---- meta ---- */
+
+.creator-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+.creator-card__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.creator-card__handle {
+  font-size: var(--fs-xs);
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.creator-card__bio {
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.creator-card__stats {
+  margin-top: 4px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+}
+
+/* follow button — always visible (no hover dependency) */
+
+.creator-card__follow {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 3;
+  height: 30px;
+  background: rgba(10, 10, 12, 0.62);
+  border-color: var(--line-strong);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.creator-card__follow.is-following {
+  background: rgba(126, 226, 184, 0.12);
+}
+
+/* compact variant (new creators) */
+
+.creator-card--compact {
+  gap: 10px;
+}
+
+.creator-card--compact .creator-card__portrait {
+  aspect-ratio: 1;
+}
+
+.creator-card--compact .creator-card__avatar {
+  width: 42px;
+  height: 42px;
+  left: 10px;
+  bottom: 10px;
+}
+
+.creator-card--compact .creator-card__bio {
+  -webkit-line-clamp: 1;
+}
+
+.creator-card--compact .creator-card__follow {
+  right: 12px;
+  top: 12px;
+}
+
+@media (min-width: 768px) {
+  .creator-card {
+    padding: 14px 14px 16px;
+  }
+}
