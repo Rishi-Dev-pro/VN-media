@@ -52,6 +52,8 @@ export interface Album {
   cover: string;
   voiceNoteIds: string[];
   year: number;
+  /** ISO date the collection was published */
+  createdAt: string;
   /** Featured in the album discovery hero */
   featured?: boolean;
   /** Public by default; future phases may add follower-only albums */

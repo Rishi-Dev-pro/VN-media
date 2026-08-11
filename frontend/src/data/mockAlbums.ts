@@ -2,7 +2,9 @@ import type { Album } from './types';
 
 /** Mock albums — curated collections of VoiceNotes.
  *  Tracks reference the shared VoiceNote catalog, so playing an
- *  album feeds the same global player queue used everywhere. */
+ *  album feeds the same global player queue used everywhere.
+ *  Only `public` albums surface in discovery; the demo listener's
+ *  private collection appears only in their own "My albums". */
 export const mockAlbums: Album[] = [
   {
     id: 'alb-night-field',
@@ -19,6 +21,7 @@ export const mockAlbums: Album[] = [
       'vn-quiet-moments',
     ],
     year: 2026,
+    createdAt: '2026-08-06T09:00:00Z',
     featured: true,
     visibility: 'public',
   },
@@ -31,6 +34,7 @@ export const mockAlbums: Album[] = [
     cover: '/images/studio-podcast.jpg',
     voiceNoteIds: ['vn-slow-hours', 'vn-studio-signals', 'vn-ideas-at-2am', 'vn-late-night-signal'],
     year: 2026,
+    createdAt: '2026-08-10T18:30:00Z',
     visibility: 'public',
   },
   {
@@ -41,6 +45,7 @@ export const mockAlbums: Album[] = [
     cover: '/images/matrix-code.jpg',
     voiceNoteIds: ['vn-velvet-circuit', 'vn-paper-satellites', 'vn-glass-horizon', 'vn-static-dreams'],
     year: 2026,
+    createdAt: '2026-08-03T21:10:00Z',
     visibility: 'public',
   },
   {
@@ -51,6 +56,7 @@ export const mockAlbums: Album[] = [
     cover: '/images/headphones-teal.jpg',
     voiceNoteIds: ['vn-morning-journal', 'vn-after-rain', 'vn-quiet-moments'],
     year: 2026,
+    createdAt: '2026-08-11T06:40:00Z',
     visibility: 'public',
   },
   {
@@ -62,6 +68,7 @@ export const mockAlbums: Album[] = [
     cover: '/images/mic-stage.jpg',
     voiceNoteIds: ['vn-late-night-signal', 'vn-underpass-choir', 'vn-city-stories', 'vn-studio-session'],
     year: 2026,
+    createdAt: '2026-07-28T17:20:00Z',
     visibility: 'public',
   },
   {
@@ -73,6 +80,7 @@ export const mockAlbums: Album[] = [
     cover: '/images/neon-headphones.jpg',
     voiceNoteIds: ['vn-neon-bloom', 'vn-tidal-room', 'vn-behind-the-song', 'vn-glass-horizon', 'vn-static-dreams'],
     year: 2026,
+    createdAt: '2026-07-19T14:50:00Z',
     visibility: 'public',
   },
   {
@@ -84,6 +92,7 @@ export const mockAlbums: Album[] = [
     cover: '/images/concert-lights.jpg',
     voiceNoteIds: ['vn-quiet-moments', 'vn-midnight-frequency', 'vn-ideas-at-2am'],
     year: 2026,
+    createdAt: '2026-08-08T22:05:00Z',
     visibility: 'public',
   },
   {
@@ -95,6 +104,7 @@ export const mockAlbums: Album[] = [
     cover: '/images/headphones-teal.jpg',
     voiceNoteIds: ['vn-studio-session', 'vn-travel-notes', 'vn-warm-static', 'vn-neon-bloom'],
     year: 2026,
+    createdAt: '2026-07-31T23:40:00Z',
     visibility: 'public',
   },
   {
@@ -106,7 +116,20 @@ export const mockAlbums: Album[] = [
     cover: '/images/mountain-peak.jpg',
     voiceNoteIds: ['vn-travel-notes', 'vn-after-rain', 'vn-morning-journal'],
     year: 2026,
+    createdAt: '2026-07-22T10:30:00Z',
     visibility: 'public',
+  },
+  {
+    id: 'alb-rishi-drafts',
+    title: 'Untitled Drafts',
+    creatorId: 'crea-rishi',
+    description:
+      'Private test recordings and half-finished ideas. Only visible to you — never surfaced in discovery.',
+    cover: '/images/hero-headphones-2.jpg',
+    voiceNoteIds: ['vn-ideas-at-2am', 'vn-travel-notes'],
+    year: 2026,
+    createdAt: '2026-08-09T02:15:00Z',
+    visibility: 'followers',
   },
 ];
 

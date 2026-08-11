@@ -8,6 +8,32 @@
   transition: background var(--dur-fast) ease;
 }
 
+.track-row__index {
+  width: 22px;
+  flex: none;
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+}
+
+.track-row.is-playing .track-row__index {
+  color: var(--accent);
+}
+
+.track-row__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  flex: none;
+}
+
+.track-row.is-playing .track-row__stat {
+  color: var(--text-2);
+}
+
 .track-row:hover {
   background: rgba(255, 255, 255, 0.045);
 }

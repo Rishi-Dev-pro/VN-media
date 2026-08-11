@@ -1,10 +1,11 @@
-import { Disc3, Play } from 'lucide-react';
+import { Disc3, Lock, Play } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { voiceNotesById } from '../../data/mockVoiceNotes';
 import type { AlbumSummary } from '../../services/albumRepository';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatMinutes } from '../../utils/format';
+import { MoreMenu } from '../common/MoreMenu';
 import './AlbumCard.css';
 
 interface AlbumCardProps {
@@ -21,6 +22,8 @@ export function AlbumCard({ album, index = 0 }: AlbumCardProps) {
     () => album.voiceNoteIds.map((id) => voiceNotesById[id]).filter(Boolean),
     [album.voiceNoteIds],
   );
+
+  const isPrivate = album.visibility === 'followers';
 
   const open = useCallback(() => {
     navigate(`/albums/${album.id}`);
@@ -55,6 +58,11 @@ export function AlbumCard({ album, index = 0 }: AlbumCardProps) {
         />
         <span className="album-card-v2__notch" aria-hidden="true" />
         <span className="album-card-v2__scrim" aria-hidden="true" />
+        {isPrivate && (
+          <span className="album-card-v2__private micro">
+            <Lock size={10} aria-hidden="true" /> Private
+          </span>
+        )}
         <span className="album-card-v2__count micro">
           <Disc3 size={11} aria-hidden="true" />
           {album.trackCount} {album.trackCount === 1 ? 'track' : 'tracks'} · {formatMinutes(album.totalDuration)}
@@ -70,6 +78,10 @@ export function AlbumCard({ album, index = 0 }: AlbumCardProps) {
         >
           <Play size={16} fill="currentColor" aria-hidden="true" />
         </button>
+      </span>
+
+      <span className="album-card-v2__more" onClick={(e) => e.stopPropagation()}>
+        <MoreMenu itemLabel={album.title} align="right" />
       </span>
 
       <span className="album-card-v2__meta">

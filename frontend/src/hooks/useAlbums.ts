@@ -19,15 +19,18 @@ function demoError(): boolean {
 interface AlbumListState {
   albums: AlbumSummary[];
   featured: AlbumSummary | null;
+  /** private collections owned by the demo listener */
+  myAlbums: AlbumSummary[];
   loading: boolean;
   error: boolean;
   retry: () => void;
 }
 
-/** Album discovery: featured + the full catalog. */
+/** Album discovery: featured + the public catalog + the listener's own collections. */
 export function useAlbums(): AlbumListState {
   const [albums, setAlbums] = useState<AlbumSummary[]>([]);
   const [featured, setFeatured] = useState<AlbumSummary | null>(null);
+  const [myAlbums, setMyAlbums] = useState<AlbumSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -36,9 +39,14 @@ export function useAlbums(): AlbumListState {
     setError(false);
     try {
       if (demoError()) throw new Error('demo error');
-      const [list, featuredAlbum] = await Promise.all([repo.getAlbums(), repo.getFeatured()]);
+      const [list, featuredAlbum, mine] = await Promise.all([
+        repo.getAlbums(),
+        repo.getFeatured(),
+        repo.getMyAlbums(),
+      ]);
       setAlbums(list);
       setFeatured(featuredAlbum);
+      setMyAlbums(mine);
     } catch {
       setError(true);
     } finally {
@@ -54,7 +62,7 @@ export function useAlbums(): AlbumListState {
     void load();
   }, [load]);
 
-  return { albums, featured, loading, error, retry };
+  return { albums, featured, myAlbums, loading, error, retry };
 }
 
 interface AlbumDetailState {

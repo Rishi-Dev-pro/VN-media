@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Disc3, Play, UserPlus, UserCheck } from 'lucide-react';
+import { ArrowLeft, Bookmark, Disc3, Lock, Play, UserPlus, UserCheck } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AlbumCard } from '../components/albums/AlbumCard';
@@ -78,9 +78,15 @@ export default function AlbumDetailPage() {
   }
 
   const following = isFollowing(album.creatorId);
+  const isPrivate = album.visibility === 'followers';
 
   return (
     <div className="album-detail">
+      {/* restrained blurred backdrop from the artwork */}
+      <div className="album-detail__backdrop" aria-hidden="true">
+        <img src={album.cover} alt="" />
+      </div>
+
       <Link to="/albums" className="album-detail__back micro land-rise">
         <ArrowLeft size={14} aria-hidden="true" /> Albums
       </Link>
@@ -102,7 +108,14 @@ export default function AlbumDetailPage() {
         {/* ---- info ---- */}
         <div className="album-detail__info">
           <p className="album-detail__kicker micro">
-            ✦&nbsp; Collection · {album.year} · <span className="album-detail__vis">Public</span>
+            ✦&nbsp; Collection · {album.year} ·{' '}
+            {isPrivate ? (
+              <span className="album-detail__vis album-detail__vis--private">
+                <Lock size={10} aria-hidden="true" /> Private
+              </span>
+            ) : (
+              <span className="album-detail__vis">Public</span>
+            )}
           </p>
           <h1 className="album-detail__title">{album.title}</h1>
           <p className="album-detail__desc">{album.description}</p>
@@ -113,22 +126,27 @@ export default function AlbumDetailPage() {
               <span className="album-detail__creator-name">{album.creatorName}</span>
               <span className="album-detail__creator-handle">@{album.creatorHandle}</span>
             </span>
-            <button
-              type="button"
-              className={`album-detail__follow ${following ? 'is-following' : ''}`}
-              aria-pressed={following}
-              onClick={() => toggleFollow(album.creatorId)}
-            >
-              {following ? (
-                <>
-                  <UserCheck size={13} aria-hidden="true" /> Following
-                </>
-              ) : (
-                <>
-                  <UserPlus size={13} aria-hidden="true" /> Follow
-                </>
-              )}
-            </button>
+            {!isPrivate && (
+              <button
+                type="button"
+                className={`album-detail__follow ${following ? 'is-following' : ''}`}
+                aria-pressed={following}
+                onClick={() => toggleFollow(album.creatorId)}
+              >
+                {following ? (
+                  <>
+                    <UserCheck size={13} aria-hidden="true" /> Following
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={13} aria-hidden="true" /> Follow
+                  </>
+                )}
+              </button>
+            )}
+            <Link to="/creators" className="album-detail__view-creator micro">
+              View creator <span aria-hidden="true">→</span>
+            </Link>
           </div>
 
           <dl className="album-detail__stats">
@@ -185,8 +203,8 @@ export default function AlbumDetailPage() {
           </span>
         </header>
         <ul className="album-detail__list">
-          {album.tracks.map((note) => (
-            <TrackRow key={note.id} note={note} queue={album.tracks} />
+          {album.tracks.map((note, i) => (
+            <TrackRow key={note.id} note={note} queue={album.tracks} index={i + 1} showComments />
           ))}
         </ul>
       </section>

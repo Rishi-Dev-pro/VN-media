@@ -5,6 +5,7 @@
    ============================================================ */
 
 .album-card-v2 {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -95,6 +96,22 @@
   letter-spacing: 0.04em;
 }
 
+.album-card-v2__private {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: var(--r-pill);
+  color: var(--text-2);
+  background: rgba(10, 10, 12, 0.66);
+  border: 1px solid var(--line-strong);
+  letter-spacing: 0.04em;
+}
+
 .album-card-v2__play {
   position: absolute;
   right: 10px;
@@ -128,6 +145,43 @@
 .album-card-v2__play:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
+}
+
+/* card more menu — subtle, sits over the artwork, no hover dependency on touch */
+.album-card-v2__more {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+}
+
+.album-card-v2__more .icon-btn {
+  background: rgba(10, 10, 12, 0.6);
+  border-color: var(--line-strong);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.album-card-v2:hover .album-card-v2__more,
+.album-card-v2:focus-visible .album-card-v2__more {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* touch devices: never hide actions behind hover */
+@media (hover: none) {
+  .album-card-v2__play {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .album-card-v2__more {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ---- meta ---- */

@@ -1,8 +1,9 @@
+import { MessageCircle } from 'lucide-react';
 import { useCallback } from 'react';
 import type { VoiceNote } from '../../data/types';
 import { getCreator } from '../../data/mockCreators';
 import { usePlayer } from '../../state/PlayerContext';
-import { formatTime } from '../../utils/format';
+import { formatCount, formatTime } from '../../utils/format';
 import { Equalizer } from '../common/Equalizer';
 import { LikeButton } from '../common/LikeButton';
 import { MoreMenu } from '../common/MoreMenu';
@@ -11,9 +12,13 @@ import './TrackRow.css';
 interface TrackRowProps {
   note: VoiceNote;
   queue: VoiceNote[];
+  /** 1-based track number — shown when provided (album track lists) */
+  index?: number;
+  /** show a comment count stat — optional, kept off Discover's rows */
+  showComments?: boolean;
 }
 
-export function TrackRow({ note, queue }: TrackRowProps) {
+export function TrackRow({ note, queue, index, showComments }: TrackRowProps) {
   const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
   const creator = getCreator(note.creatorId);
 
@@ -41,14 +46,20 @@ export function TrackRow({ note, queue }: TrackRowProps) {
         }}
         aria-label={`${note.title} by ${creator.name} — play`}
       >
-        <span className="track-row__art">
-          <img src={note.cover} alt="" loading="lazy" width={44} height={44} />
-          <span className="track-row__play-hint" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path d="M8 5.5v13l11-6.5-11-6.5z" />
-            </svg>
-          </span>
+      {index !== undefined && (
+        <span className="track-row__index tabular" aria-hidden="true">
+          {String(index).padStart(2, '0')}
         </span>
+      )}
+
+      <span className="track-row__art">
+        <img src={note.cover} alt="" loading="lazy" width={44} height={44} />
+        <span className="track-row__play-hint" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <path d="M8 5.5v13l11-6.5-11-6.5z" />
+          </svg>
+        </span>
+      </span>
 
         <span className="track-row__meta">
           <span className="track-row__title-row">
@@ -57,6 +68,13 @@ export function TrackRow({ note, queue }: TrackRowProps) {
           </span>
           <span className="track-row__handle">@{creator.handle}</span>
         </span>
+
+        {showComments && (
+          <span className="track-row__stat" title={`${formatCount(note.comments)} comments`}>
+            <MessageCircle size={13} aria-hidden="true" />
+            <span className="tabular">{formatCount(note.comments)}</span>
+          </span>
+        )}
 
         <span className="track-row__duration tabular">{formatTime(note.duration)}</span>
 
