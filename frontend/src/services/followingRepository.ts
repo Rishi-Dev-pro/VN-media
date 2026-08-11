@@ -1,11 +1,6 @@
 import type { VoiceNote } from '../data/types';
-import {
-  allRailCreators,
-  DEMO_LISTENER,
-  DEMO_NOW,
-  initialFollowing,
-  notesByCreator,
-} from '../data/mockFollowing';
+import { DEMO_LISTENER, DEMO_NOW, initialFollowing, notesByCreator } from '../data/mockFollowing';
+import { mockCreators } from '../data/mockCreators';
 import { mockVoiceNotes } from '../data/mockVoiceNotes';
 
 /* ============================================================
@@ -59,7 +54,9 @@ export const mockFollowingRepository: FollowingRepository = {
     }
 
     const followed = new Set(followedIds);
-    const creators: FollowingCreator[] = allRailCreators.map((c) => ({
+    // the full known catalog — the rail shows followed creators, the
+    // "You may like" section derives its suggestions from the rest
+    const creators: FollowingCreator[] = mockCreators.map((c) => ({
       id: c.id,
       handle: c.handle,
       name: c.name,

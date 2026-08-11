@@ -112,6 +112,29 @@
   text-transform: uppercase;
 }
 
+.feed-card__album {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent-strong);
+  letter-spacing: var(--ls-med);
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--accent-dim);
+  border: 1px solid rgba(159, 212, 232, 0.2);
+  transition: background var(--dur-fast) ease;
+}
+
+.feed-card__album:hover {
+  background: rgba(159, 212, 232, 0.16);
+}
+
+.feed-card__album:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .feed-card__time {
   margin-left: auto;
   color: var(--text-3);

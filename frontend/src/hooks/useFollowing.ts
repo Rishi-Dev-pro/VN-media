@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { VoiceNote } from '../data/types';
+import { mockAlbums } from '../data/mockAlbums';
 import { DEMO_NOW } from '../data/mockFollowing';
 import { useFollows } from '../state/FollowContext';
+import { createVoiceNoteRepository } from '../services/voiceNoteRepository';
 import {
   createFollowingRepository,
   type FollowingCreator,
@@ -10,14 +12,15 @@ import {
 
 const repo = createFollowingRepository();
 
-export type FeedFilter = 'all' | 'recent' | 'creators';
+export type FeedFilter = 'all' | 'new' | 'albums' | 'creators';
 
 export type FeedSort = 'latest' | 'liked' | 'played';
 
-/** Window used by the RECENT filter (hours). */
-const RECENT_WINDOW_MS = 72 * 60 * 60 * 1000;
+/** Window used by the NEW filter (hours). */
+const NEW_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export interface UseFollowing {
+  /** every known creator (rail + recommendations) */
   creators: FollowingCreator[];
   notes: VoiceNote[];
   loading: boolean;
@@ -32,29 +35,32 @@ export interface UseFollowing {
   /** ordering of the feed within the active filter */
   sort: FeedSort;
   setSort: (s: FeedSort) => void;
-  /** creator filter (\"all from @handle\") */
-  selectedCreator: string | null;
-  selectCreator: (creatorId: string | null) => void;
   /** notes shown in the feed after all filters */
   visibleNotes: VoiceNote[];
+  /** newest note from the followed creators (featured card) */
+  featuredNote: VoiceNote | null;
+  /** recently played history for the Continue listening strip */
+  recentlyPlayed: VoiceNote[];
+  /** notes that belong to a public album (the ALBUMS filter) */
+  albumNotes: Set<string>;
   newThisWeek: number;
 }
 
 /**
- * Loads the following feed through the repository. Follow state,
- * filters and the selected creator live here (page-local), while
- * playback stays in the global PlayerContext.
+ * Loads the following feed through the repository. Follow state lives
+ * in the shared FollowContext (one social graph for the whole app),
+ * while playback stays in the global PlayerContext.
  */
 export function useFollowing(): UseFollowing {
   const { followingIds, toggleFollow, isFollowing } = useFollows();
   const [creators, setCreators] = useState<FollowingCreator[]>([]);
   const [notes, setNotes] = useState<VoiceNote[]>([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<VoiceNote[]>([]);
   const [newThisWeek, setNewThisWeek] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<FeedFilter>('all');
   const [sort, setSort] = useState<FeedSort>('latest');
-  const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,6 +70,8 @@ export function useFollowing(): UseFollowing {
       setCreators(data.creators);
       setNotes(data.notes);
       setNewThisWeek(data.newThisWeek);
+      const played = await createVoiceNoteRepository().getRecentlyPlayed();
+      setRecentlyPlayed(played);
     } catch {
       setError(true);
     } finally {
@@ -78,18 +86,26 @@ export function useFollowing(): UseFollowing {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followingIds]);
 
-  const selectCreator = useCallback((creatorId: string | null) => {
-    setSelectedCreator(creatorId);
-  }, []);
+  /** noteIds that appear in any public album (for the ALBUMS filter). */
+  const albumNotes = useMemo(
+    () =>
+      new Set(
+        mockAlbums
+          .filter((a) => (a.visibility ?? 'public') === 'public')
+          .flatMap((a) => a.voiceNoteIds),
+      ),
+    [],
+  );
+
+  const featuredNote = useMemo(() => notes[0] ?? null, [notes]);
 
   const visibleNotes = useMemo(() => {
     let list = notes;
-    if (selectedCreator) {
-      list = list.filter((n) => n.creatorId === selectedCreator);
-    }
-    if (filter === 'recent') {
-      const cutoff = DEMO_NOW - RECENT_WINDOW_MS;
+    if (filter === 'new') {
+      const cutoff = DEMO_NOW - NEW_WINDOW_MS;
       list = list.filter((n) => +new Date(n.releasedAt) >= cutoff);
+    } else if (filter === 'albums') {
+      list = list.filter((n) => albumNotes.has(n.id));
     }
     // the repository returns newest-first; other orders re-sort stably
     if (sort === 'liked') {
@@ -102,7 +118,7 @@ export function useFollowing(): UseFollowing {
       );
     }
     return list;
-  }, [notes, selectedCreator, filter, sort]);
+  }, [notes, filter, sort, albumNotes]);
 
   const retry = useCallback(() => {
     void load();
@@ -121,9 +137,10 @@ export function useFollowing(): UseFollowing {
     setFilter,
     sort,
     setSort,
-    selectedCreator,
-    selectCreator,
     visibleNotes,
+    featuredNote,
+    recentlyPlayed,
+    albumNotes,
     newThisWeek,
   };
 }

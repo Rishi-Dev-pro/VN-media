@@ -1,4 +1,4 @@
-import { MessageCircle, Pause, Play } from 'lucide-react';
+import { Disc3, MessageCircle, Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import type { VoiceNote } from '../../data/types';
@@ -20,9 +20,11 @@ interface FeedCardProps {
   index: number;
   /** open the comments UI for this note (optional — pages opt in) */
   onOpenComments?: (note: VoiceNote) => void;
+  /** album this note belongs to — renders a From-album chip (optional) */
+  album?: { id: string; title: string } | null;
 }
 
-export function FeedCard({ note, queue, index, onOpenComments }: FeedCardProps) {
+export function FeedCard({ note, queue, index, onOpenComments, album }: FeedCardProps) {
   const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
 
   const creator = getCreator(note.creatorId);
@@ -64,6 +66,16 @@ export function FeedCard({ note, queue, index, onOpenComments }: FeedCardProps) 
         <span className="feed-card__topline">
           <span className="feed-card__tag micro">{note.category}</span>
           {isNew && <span className="feed-card__new micro">●&nbsp; New</span>}
+          {album && (
+            <Link
+              to={`/albums/${album.id}`}
+              className="feed-card__album micro"
+              aria-label={`From album ${album.title}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Disc3 size={11} aria-hidden="true" /> From {album.title}
+            </Link>
+          )}
           <span className="feed-card__time micro tabular">{formatRelative(note.releasedAt, DEMO_NOW)}</span>
         </span>
 

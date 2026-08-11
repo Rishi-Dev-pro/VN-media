@@ -1,13 +1,24 @@
-import { Check, ChevronDown, Compass, Radio, Users, X } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  Compass,
+  Radio,
+  RefreshCw,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CirclePanel } from '../components/following/CirclePanel';
+import { ContinueListening } from '../components/following/ContinueListening';
 import { CreatorRail } from '../components/following/CreatorRail';
+import { YouMayLike } from '../components/following/YouMayLike';
 import { CommentsDrawer } from '../components/comments/CommentsDrawer';
-import { FeedCard } from '../components/voiceNotes/FeedCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { FeaturedCard } from '../components/voiceNotes/FeaturedCard';
+import { FeedCard } from '../components/voiceNotes/FeedCard';
+import { mockAlbums } from '../data/mockAlbums';
 import type { VoiceNote } from '../data/types';
-import { getCreator } from '../data/mockCreators';
 import { DEMO_LISTENER } from '../data/mockFollowing';
 import { useFollowing, type FeedFilter, type FeedSort } from '../hooks/useFollowing';
 import { formatCount } from '../utils/format';
@@ -15,8 +26,15 @@ import './FollowingPage.css';
 
 const FILTERS: { id: FeedFilter; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'recent', label: 'Recent' },
+  { id: 'new', label: 'New' },
+  { id: 'albums', label: 'Albums' },
   { id: 'creators', label: 'Creators' },
+];
+
+const SORTS: { id: FeedSort; label: string }[] = [
+  { id: 'latest', label: 'Latest' },
+  { id: 'liked', label: 'Most liked' },
+  { id: 'played', label: 'Most listened' },
 ];
 
 export default function FollowingPage() {
@@ -31,23 +49,41 @@ export default function FollowingPage() {
     setFilter,
     sort,
     setSort,
-    selectedCreator,
-    selectCreator,
     visibleNotes,
+    featuredNote,
+    recentlyPlayed,
     newThisWeek,
   } = useFollowing();
 
   const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
 
-  const selectedCreatorObj = useMemo(
-    () => (selectedCreator ? getCreator(selectedCreator) : null),
-    [selectedCreator],
-  );
-
+  // rail = followed creators only (the social graph's followed set)
   const shownCreators = useMemo(
     () => creators.filter((c) => followingIds.has(c.id)),
     [creators, followingIds],
   );
+
+  // deterministic recommendations: not followed, sorted by popularity
+  const suggestions = useMemo(
+    () =>
+      creators
+        .filter((c) => !followingIds.has(c.id))
+        .sort((a, b) => b.followers - a.followers)
+        .slice(0, 4),
+    [creators, followingIds],
+  );
+
+  // noteId -> public album it belongs to (for the From-album chip)
+  const albumByNote = useMemo(() => {
+    const map = new Map<string, { id: string; title: string }>();
+    for (const a of mockAlbums) {
+      if ((a.visibility ?? 'public') !== 'public') continue;
+      for (const vid of a.voiceNoteIds) {
+        if (!map.has(vid)) map.set(vid, { id: a.id, title: a.title });
+      }
+    }
+    return map;
+  }, []);
 
   return (
     <div className="following">
@@ -61,7 +97,7 @@ export default function FollowingPage() {
             <span className="text-ghost">YOUR SOUND.</span>
           </h1>
           <p className="following-head__sub">
-            Stay close to the voices that matter to you.
+            Your latest sounds from the people you listen to.
           </p>
         </div>
         <div className="following-head__listener" aria-label="Demo listener">
@@ -72,15 +108,15 @@ export default function FollowingPage() {
         </div>
       </header>
 
-      {/* ---- creator rail ---- */}
+      {/* ---- creator rail (followed only) ---- */}
       <section className="following-rail-sec" aria-label="People you follow">
         <div className="following-sec-title">
           <h2 className="following-sec-title__text">
-            <Users size={15} aria-hidden="true" /> People you follow
+            <Users size={15} aria-hidden="true" /> Your voices
           </h2>
           {!loading && !error && (
             <span className="following-sec-title__meta micro">
-              {shownCreators.length} of {creators.length} creators
+              {shownCreators.length} {shownCreators.length === 1 ? 'creator' : 'creators'} in your circle
             </span>
           )}
         </div>
@@ -97,17 +133,28 @@ export default function FollowingPage() {
           </div>
         ) : (
           <CreatorRail
-            creators={creators}
+            creators={shownCreators}
             followingIds={followingIds}
-            selected={selectedCreator}
-            onSelect={selectCreator}
             onToggleFollow={toggleFollow}
           />
         )}
       </section>
 
-      {/* ---- filters + feed ---- */}
+      {/* ---- feed column ---- */}
       <section className="following-feed-sec" aria-label="Feed from your circle">
+        {/* featured new voice */}
+        {!loading && !error && filter === 'all' && featuredNote && (
+          <div className="following-featured">
+            <div className="following-sec-title">
+              <h2 className="following-sec-title__text">
+                <Sparkles size={15} aria-hidden="true" /> New from your circle
+              </h2>
+            </div>
+            <FeaturedCard note={featuredNote} queue={visibleNotes} />
+          </div>
+        )}
+
+        {/* feed bar */}
         <div className="following-feed-bar">
           <div className="seg" role="tablist" aria-label="Feed filters">
             {FILTERS.map((f) => {
@@ -129,29 +176,27 @@ export default function FollowingPage() {
 
           <SortMenu sort={sort} onSort={setSort} />
 
-          {selectedCreatorObj ? (
-            <button
-              type="button"
-              className="following-filter-chip"
-              onClick={() => selectCreator(null)}
-              aria-label="Clear creator filter"
-            >
-              All from @{selectedCreatorObj.handle}
-              <X size={13} aria-hidden="true" />
-            </button>
-          ) : (
-            <span className="following-feed-count micro tabular">
-              {visibleNotes.length} notes
-            </span>
-          )}
+          <button
+            type="button"
+            className={`following-refresh ${loading ? 'is-spinning' : ''}`}
+            aria-label="Refresh the feed"
+            title="Refresh the feed"
+            onClick={retry}
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+          </button>
+
+          <span className="following-feed-count micro tabular">
+            {loading ? '…' : `${visibleNotes.length} ${visibleNotes.length === 1 ? 'note' : 'notes'}`}
+          </span>
         </div>
 
         {/* ---- states ---- */}
         {error ? (
           <EmptyState
             icon={<Radio />}
-            title="We lost the signal."
-            body="Something went wrong while loading your circle."
+            title="Signal interrupted."
+            body="Something went wrong while loading your listening room."
             action={
               <button type="button" className="btn btn--primary" onClick={retry}>
                 Try again
@@ -173,24 +218,12 @@ export default function FollowingPage() {
           </div>
         ) : filter === 'creators' ? (
           <CreatorGrid
-            creators={creators}
+            creators={shownCreators}
             followingIds={followingIds}
             onToggleFollow={toggleFollow}
-            onOpen={(id) => {
-              selectCreator(id);
-              setFilter('all');
-            }}
           />
         ) : visibleNotes.length === 0 ? (
-          <FeedEmpty
-            hasFollowing={shownCreators.length > 0}
-            selectedHandle={selectedCreatorObj?.handle ?? null}
-            onFollowBack={
-              selectedCreator
-                ? () => toggleFollow(selectedCreator)
-                : undefined
-            }
-          />
+          <FeedEmpty filter={filter} hasFollowing={shownCreators.length > 0} />
         ) : (
           <div className="following-feed-list">
             {visibleNotes.map((note, i) => (
@@ -200,8 +233,36 @@ export default function FollowingPage() {
                 queue={visibleNotes}
                 index={i}
                 onOpenComments={setCommentsNote}
+                album={albumByNote.get(note.id) ?? null}
               />
             ))}
+          </div>
+        )}
+
+        {/* continue listening */}
+        {!loading && !error && recentlyPlayed.length > 0 && (
+          <div className="following-continue">
+            <div className="following-sec-title">
+              <h2 className="following-sec-title__text">
+                <Radio size={15} aria-hidden="true" /> Continue listening
+              </h2>
+            </div>
+            <ContinueListening notes={recentlyPlayed} />
+          </div>
+        )}
+
+        {/* you may like */}
+        {!loading && !error && suggestions.length > 0 && (
+          <div className="following-maylike">
+            <div className="following-sec-title">
+              <h2 className="following-sec-title__text">You may like</h2>
+              <span className="following-sec-title__meta micro">By popularity</span>
+            </div>
+            <YouMayLike
+              creators={suggestions}
+              followingIds={followingIds}
+              onToggleFollow={toggleFollow}
+            />
           </div>
         )}
       </section>
@@ -219,12 +280,6 @@ export default function FollowingPage() {
 }
 
 /* ---------- sort control ---------- */
-
-const SORTS: { id: FeedSort; label: string }[] = [
-  { id: 'latest', label: 'Latest' },
-  { id: 'liked', label: 'Most liked' },
-  { id: 'played', label: 'Recently played' },
-];
 
 function SortMenu({ sort, onSort }: { sort: FeedSort; onSort: (s: FeedSort) => void }) {
   const [open, setOpen] = useState(false);
@@ -290,12 +345,10 @@ function CreatorGrid({
   creators,
   followingIds,
   onToggleFollow,
-  onOpen,
 }: {
   creators: { id: string; handle: string; name: string; avatar: string; bio: string; tint: string; followers: number }[];
   followingIds: Set<string>;
   onToggleFollow: (id: string) => void;
-  onOpen: (id: string) => void;
 }) {
   return (
     <div className="creator-grid">
@@ -304,27 +357,26 @@ function CreatorGrid({
         return (
           <article
             key={creator.id}
-            className="creator-card"
+            className="following-card"
             style={{ animationDelay: `${Math.min(i, 6) * 60}ms` }}
           >
-            <button
-              type="button"
-              className="creator-card__open"
-              aria-label={`Show everything from ${creator.name}`}
-              onClick={() => onOpen(creator.id)}
+            <Link
+              to={`/creators/${creator.handle}`}
+              className="following-card__open"
+              aria-label={`View profile of ${creator.name}`}
             >
               <span
-                className="creator-card__avatar"
+                className="following-card__avatar"
                 style={{ ['--tint' as string]: creator.tint }}
               >
                 <img src={creator.avatar} alt="" loading="lazy" width={64} height={64} />
               </span>
-              <span className="creator-card__handle">@{creator.handle}</span>
-              <span className="creator-card__name">{creator.name}</span>
-            </button>
-            <p className="creator-card__bio">{creator.bio}</p>
-            <div className="creator-card__foot">
-              <span className="creator-card__followers micro tabular">
+              <span className="following-card__handle">@{creator.handle}</span>
+              <span className="following-card__name">{creator.name}</span>
+            </Link>
+            <p className="following-card__bio">{creator.bio}</p>
+            <div className="following-card__foot">
+              <span className="following-card__followers micro tabular">
                 {formatCount(creator.followers)} followers
               </span>
               <button
@@ -346,40 +398,44 @@ function CreatorGrid({
 
 /* ---------- empty states ---------- */
 
-function FeedEmpty({
-  hasFollowing,
-  selectedHandle,
-  onFollowBack,
-}: {
-  hasFollowing: boolean;
-  selectedHandle: string | null;
-  onFollowBack?: () => void;
-}) {
-  if (selectedHandle && !hasFollowing) {
+function FeedEmpty({ filter, hasFollowing }: { filter: FeedFilter; hasFollowing: boolean }) {
+  if (!hasFollowing) {
+    return (
+      <EmptyState
+        icon={<Compass />}
+        title="Your listening room is quiet."
+        body="Follow a few voices and their latest stories will appear here."
+        action={
+          <Link to="/creators" className="btn btn--primary">
+            Discover creators <span aria-hidden="true">→</span>
+          </Link>
+        }
+      />
+    );
+  }
+  if (filter === 'new') {
+    return (
+      <EmptyState
+        icon={<Radio />}
+        title="Nothing new today."
+        body="Nobody from your circle has published in the last 24 hours."
+      />
+    );
+  }
+  if (filter === 'albums') {
     return (
       <EmptyState
         icon={<Users />}
-        title="This feed is quiet."
-        body={`Follow @${selectedHandle} to see their voices here.`}
-        action={
-          <button type="button" className="btn btn--primary" onClick={onFollowBack}>
-            Follow @{selectedHandle}
-          </button>
-        }
+        title="No album tracks here."
+        body="None of the recent VoiceNotes from your circle belong to a collection."
       />
     );
   }
   return (
     <EmptyState
       icon={<Compass />}
-      title="Your circle is quiet."
-      body="Follow creators whose voices you want to hear here."
-      action={
-        <Link to="/discover" className="btn btn--primary">
-          Discover voices <span aria-hidden="true">→</span>
-        </Link>
-      }
+      title="This feed is quiet."
+      body="The voices you follow haven't published yet."
     />
   );
 }
-
