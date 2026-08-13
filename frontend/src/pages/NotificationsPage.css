@@ -1,0 +1,307 @@
+.notifications-page {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  max-width: 680px;
+}
+
+/* ---------- header ---------- */
+
+.notif-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.notif-head__eyebrow {
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.notif-head__title {
+  font-size: clamp(2rem, 5.2vw, 2.9rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  font-weight: 500;
+}
+
+.notif-head__ghost {
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: clamp(0.95rem, 2.4vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  -webkit-text-stroke: 1.2px rgba(244, 244, 246, 0.4);
+}
+
+.notif-head__sub {
+  margin-top: 12px;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.notif-head__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-med);
+  color: var(--text-3);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.notif-head__badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.notif-head__unread {
+  margin-left: 4px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text);
+  background: var(--accent-dim);
+  border: 1px solid rgba(159, 212, 232, 0.35);
+}
+
+/* ---------- controls ---------- */
+
+.notif-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notif-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+}
+
+.notif-tabs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-3);
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+
+.notif-tabs__item:hover {
+  color: var(--text);
+}
+
+.notif-tabs__item.is-active {
+  color: var(--text);
+  background: var(--surface-4);
+  box-shadow: var(--shadow-pill);
+}
+
+.notif-tabs__count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent-strong);
+  background: var(--accent-dim);
+  border: 1px solid rgba(159, 212, 232, 0.3);
+}
+
+.notif-markall {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+
+.notif-markall:hover:not(:disabled) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--line-strong);
+}
+
+.notif-markall:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------- feed ---------- */
+
+.notif-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.notif-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notif-group__day {
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-med);
+  color: var(--text-3);
+  padding-left: 4px;
+}
+
+.notif-group__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notif-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.notif-more__count {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  letter-spacing: var(--ls-med);
+}
+
+/* ---------- skeleton ---------- */
+
+.notif-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notif-sk {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 14px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line);
+}
+
+.notif-sk__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  flex: none;
+}
+
+.notif-sk__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.notif-sk__lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.notif-sk__line {
+  height: 11px;
+  border-radius: 6px;
+}
+
+/* ---------- empty / error orb ---------- */
+
+.notif-page__orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: var(--text-3);
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  font-size: 18px;
+}
+
+/* ---------- mark-all toast ---------- */
+
+.notif-toast-banner {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 18px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--ls-med);
+  color: var(--text);
+  background: rgba(24, 24, 30, 0.95);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: page-in var(--dur-fast) var(--ease-out) both;
+  white-space: nowrap;
+}
+
+.notif-toast-banner__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 8px rgba(126, 226, 184, 0.7);
+}
+
+/* ---------- responsive ---------- */
+
+@media (min-width: 768px) {
+  .notifications-page {
+    gap: 32px;
+  }
+}

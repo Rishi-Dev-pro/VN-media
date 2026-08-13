@@ -2,6 +2,7 @@ import { Bell, MessageCircle, Search } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
 import { IconButton } from '../common/IconButton';
 import type { View } from '../../types/navigation';
+import { useNotificationsBadge } from '../../state/NotificationContext';
 import './AppHeader.css';
 
 interface AppHeaderProps {
@@ -10,6 +11,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ view, onNavigate }: AppHeaderProps) {
+  const unread = useNotificationsBadge();
   return (
     <div className="app-header">
       <button
@@ -43,12 +45,16 @@ export function AppHeader({ view, onNavigate }: AppHeaderProps) {
         </IconButton>
 
         <IconButton
-          label="Notifications (1 unread)"
+          label={unread > 0 ? `Notifications (${unread} unread)` : 'Notifications'}
           onClick={() => onNavigate('notifications')}
           className="app-header__bell"
         >
           <Bell />
-          <span className="dot dot--pink" aria-hidden="true" />
+          {unread > 0 && (
+            <span className="app-header__badge" aria-hidden="true">
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
         </IconButton>
 
         <button

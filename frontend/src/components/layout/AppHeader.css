@@ -71,6 +71,27 @@
   box-shadow: 0 0 8px rgba(245, 110, 160, 0.8);
 }
 
+.app-header__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 10px -2px var(--accent-glow);
+  pointer-events: none;
+}
+
 .app-header__search {
   display: none;
 }

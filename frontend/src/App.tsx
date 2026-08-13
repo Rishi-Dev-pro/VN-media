@@ -14,8 +14,10 @@ import CreatorProfilePage from './pages/CreatorProfilePage';
 import LibraryPage from './pages/LibraryPage';
 import MessagesPage from './pages/MessagesPage';
 import ConversationPage from './pages/ConversationPage';
+import NotificationsPage from './pages/NotificationsPage';
 import LandingPage from './pages/landing/LandingPage';
 import { FollowProvider } from './state/FollowContext';
+import { NotificationProvider } from './state/NotificationContext';
 import { PlayerProvider } from './state/PlayerContext';
 import type { View } from './types/navigation';
 
@@ -29,16 +31,13 @@ function ScrollToTop() {
 }
 
 /** App views that render elegant placeholders until their phase lands. */
-const PLACEHOLDER_VIEWS: View[] = [
-  'notifications',
-  'profile',
-  'create',
-];
+const PLACEHOLDER_VIEWS: View[] = ['profile', 'create'];
 
 export default function App() {
   return (
     <PlayerProvider>
       <FollowProvider>
+        <NotificationProvider>
         <ScrollToTop />
         <Routes>
         <Route path="/" element={<LandingPage />} />
@@ -54,6 +53,7 @@ export default function App() {
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/messages/:conversationId" element={<ConversationPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           {PLACEHOLDER_VIEWS.map((v) => (
             <Route key={v} path={`/${v}`} element={<PlaceholderPage view={v} />} />
           ))}
@@ -64,6 +64,7 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </NotificationProvider>
       </FollowProvider>
     </PlayerProvider>
   );
