@@ -1,4 +1,4 @@
-import { Disc3, MessageCircle, Pause, Play } from 'lucide-react';
+import { BookmarkX, Disc3, MessageCircle, Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import type { VoiceNote } from '../../data/types';
@@ -22,9 +22,13 @@ interface FeedCardProps {
   onOpenComments?: (note: VoiceNote) => void;
   /** album this note belongs to — renders a From-album chip (optional) */
   album?: { id: string; title: string } | null;
+  /** notified when this note starts playing (optional — library records history) */
+  onPlay?: (note: VoiceNote) => void;
+  /** renders a remove-from-library action (optional) */
+  onRemove?: (note: VoiceNote) => void;
 }
 
-export function FeedCard({ note, queue, index, onOpenComments, album }: FeedCardProps) {
+export function FeedCard({ note, queue, index, onOpenComments, album, onPlay, onRemove }: FeedCardProps) {
   const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
 
   const creator = getCreator(note.creatorId);
@@ -36,8 +40,11 @@ export function FeedCard({ note, queue, index, onOpenComments, album }: FeedCard
 
   const activate = useCallback(() => {
     if (isCurrent) toggle();
-    else play(note, queue);
-  }, [isCurrent, note, queue, play, toggle]);
+    else {
+      play(note, queue);
+      onPlay?.(note);
+    }
+  }, [isCurrent, note, queue, play, toggle, onPlay]);
 
   return (
     <article
@@ -136,6 +143,20 @@ export function FeedCard({ note, queue, index, onOpenComments, album }: FeedCard
               <MessageCircle size={16} aria-hidden="true" />
               <span className="tabular">{formatCount(note.comments)}</span>
             </button>
+            {onRemove && (
+              <button
+                type="button"
+                className="feed-card__remove"
+                aria-label={`Remove ${note.title} from library`}
+                title="Remove from library"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(note);
+                }}
+              >
+                <BookmarkX size={15} aria-hidden="true" />
+              </button>
+            )}
             <MoreMenu itemLabel={note.title} align="right" />
           </span>
         </span>

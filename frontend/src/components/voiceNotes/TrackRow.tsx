@@ -1,4 +1,4 @@
-import { MessageCircle } from 'lucide-react';
+import { BookmarkX, MessageCircle } from 'lucide-react';
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import type { VoiceNote } from '../../data/types';
@@ -17,9 +17,13 @@ interface TrackRowProps {
   index?: number;
   /** show a comment count stat — optional, kept off Discover's rows */
   showComments?: boolean;
+  /** notified when this note starts playing (optional — library records history) */
+  onPlay?: (note: VoiceNote) => void;
+  /** renders a remove-from-library action (optional) */
+  onRemove?: (note: VoiceNote) => void;
 }
 
-export function TrackRow({ note, queue, index, showComments }: TrackRowProps) {
+export function TrackRow({ note, queue, index, showComments, onPlay, onRemove }: TrackRowProps) {
   const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
   const creator = getCreator(note.creatorId);
 
@@ -29,8 +33,11 @@ export function TrackRow({ note, queue, index, showComments }: TrackRowProps) {
 
   const activate = useCallback(() => {
     if (isCurrent) toggle();
-    else play(note, queue);
-  }, [isCurrent, note, queue, play, toggle]);
+    else {
+      play(note, queue);
+      onPlay?.(note);
+    }
+  }, [isCurrent, note, queue, play, toggle, onPlay]);
 
   return (
     <li>
@@ -96,6 +103,20 @@ export function TrackRow({ note, queue, index, showComments }: TrackRowProps) {
           label={note.title}
         />
 
+        {onRemove && (
+          <button
+            type="button"
+            className="track-row__remove"
+            aria-label={`Remove ${note.title} from library`}
+            title="Remove from library"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(note);
+            }}
+          >
+            <BookmarkX size={15} aria-hidden="true" />
+          </button>
+        )}
         <span onClick={(e) => e.stopPropagation()} role="presentation">
           <MoreMenu itemLabel={note.title} />
         </span>

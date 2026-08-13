@@ -1,6 +1,7 @@
 import {
   Compass,
   Home,
+  Library,
   PlusCircle,
   Search,
   User,
@@ -11,6 +12,7 @@ import './MobileBottomNav.css';
 const ITEMS: { id: View; label: string; icon: typeof Home; notify?: boolean }[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'discover', label: 'Discover', icon: Compass },
+  { id: 'library', label: 'Library', icon: Library },
   { id: 'create', label: 'Create', icon: PlusCircle },
   { id: 'search', label: 'Search', icon: Search },
   { id: 'profile', label: 'Profile', icon: User, notify: true },

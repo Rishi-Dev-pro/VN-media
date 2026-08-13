@@ -1,4 +1,4 @@
-import { Disc3, Lock, Play } from 'lucide-react';
+import { BookmarkX, Disc3, Lock, Play } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { voiceNotesById } from '../../data/mockVoiceNotes';
@@ -11,10 +11,12 @@ import './AlbumCard.css';
 interface AlbumCardProps {
   album: AlbumSummary;
   index?: number;
+  /** renders a remove-from-library action (optional — library view) */
+  onRemove?: (album: AlbumSummary) => void;
 }
 
 /** Album grid card — opens the album, or plays its first track directly. */
-export function AlbumCard({ album, index = 0 }: AlbumCardProps) {
+export function AlbumCard({ album, index = 0, onRemove }: AlbumCardProps) {
   const navigate = useNavigate();
   const { play } = usePlayer();
 
@@ -81,6 +83,20 @@ export function AlbumCard({ album, index = 0 }: AlbumCardProps) {
       </span>
 
       <span className="album-card-v2__more" onClick={(e) => e.stopPropagation()}>
+        {onRemove && (
+          <button
+            type="button"
+            className="album-card-v2__remove"
+            aria-label={`Remove ${album.title} from library`}
+            title="Remove from library"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(album);
+            }}
+          >
+            <BookmarkX size={14} aria-hidden="true" />
+          </button>
+        )}
         <MoreMenu itemLabel={album.title} align="right" />
       </span>
 

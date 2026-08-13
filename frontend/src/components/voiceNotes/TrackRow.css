@@ -138,3 +138,20 @@
   color: var(--text-3);
   flex: none;
 }
+
+.track-row__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  color: var(--text-3);
+  flex: none;
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+
+.track-row__remove:hover {
+  color: var(--pink);
+  background: rgba(245, 110, 160, 0.1);
+}
