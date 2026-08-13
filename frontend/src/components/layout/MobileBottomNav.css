@@ -70,6 +70,19 @@
   color: var(--text-2);
 }
 
+/* Seven items: drop the text labels on narrow phones so nothing overflows;
+   icons remain fully tappable and aria-labels carry the meaning. */
+@media (max-width: 519px) {
+  .bottom-nav__item {
+    gap: 0;
+    padding: 9px 2px;
+  }
+
+  .bottom-nav__label {
+    display: none;
+  }
+}
+
 .bottom-nav__ping {
   position: absolute;
   top: -2px;

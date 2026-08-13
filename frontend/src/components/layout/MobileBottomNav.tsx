@@ -2,6 +2,7 @@ import {
   Compass,
   Home,
   Library,
+  MessageCircle,
   PlusCircle,
   Search,
   User,
@@ -13,8 +14,9 @@ const ITEMS: { id: View; label: string; icon: typeof Home; notify?: boolean }[] 
   { id: 'home', label: 'Home', icon: Home },
   { id: 'discover', label: 'Discover', icon: Compass },
   { id: 'library', label: 'Library', icon: Library },
-  { id: 'create', label: 'Create', icon: PlusCircle },
+  { id: 'messages', label: 'Messages', icon: MessageCircle, notify: true },
   { id: 'search', label: 'Search', icon: Search },
+  { id: 'create', label: 'Create', icon: PlusCircle },
   { id: 'profile', label: 'Profile', icon: User, notify: true },
 ];
 
