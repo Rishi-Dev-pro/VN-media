@@ -10,6 +10,8 @@ interface LikeButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** compact heart-only mode */
   iconOnly?: boolean;
   label?: string;
+  /** pending mock persistence — dims the control while busy */
+  busy?: boolean;
 }
 
 export function LikeButton({
@@ -17,6 +19,7 @@ export function LikeButton({
   count,
   iconOnly = false,
   label = 'Like',
+  busy = false,
   className = '',
   ...rest
 }: LikeButtonProps) {
@@ -24,9 +27,10 @@ export function LikeButton({
     <button
       type="button"
       aria-pressed={liked}
+      aria-busy={busy || undefined}
       aria-label={liked ? `Unlike — ${label}` : `Like — ${label}`}
       title={liked ? 'Unlike' : 'Like'}
-      className={`like-btn ${liked ? 'is-liked' : ''} ${iconOnly ? 'like-btn--icon' : ''} ${className}`}
+      className={`like-btn ${liked ? 'is-liked' : ''} ${busy ? 'is-busy' : ''} ${iconOnly ? 'like-btn--icon' : ''} ${className}`}
       {...rest}
     >
       <span className="like-btn__icon">

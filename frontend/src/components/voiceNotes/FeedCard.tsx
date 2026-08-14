@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import type { VoiceNote } from '../../data/types';
 import { getCreator } from '../../data/mockCreators';
 import { DEMO_NOW } from '../../data/mockFollowing';
+import { useCommentCount } from '../../hooks/useCommentCount';
+import { useEngagement } from '../../hooks/useEngagement';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatCount, formatRelative, formatTime } from '../../utils/format';
 import { Avatar } from '../common/Avatar';
@@ -29,13 +31,14 @@ interface FeedCardProps {
 }
 
 export function FeedCard({ note, queue, index, onOpenComments, album, onPlay, onRemove }: FeedCardProps) {
-  const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
+  const { current, isPlaying, play, toggle } = usePlayer();
+  const { liked, likeCount, busy: likeBusy, toggle: toggleLike } = useEngagement(note);
+  const commentCount = useCommentCount(note.id, note.comments);
 
   const creator = getCreator(note.creatorId);
 
   const isCurrent = current?.id === note.id;
   const playing = isCurrent && isPlaying;
-  const liked = isLiked(note.id);
   const isNew = DEMO_NOW - +new Date(note.releasedAt) <= NEW_WINDOW_MS;
 
   const activate = useCallback(() => {
@@ -122,18 +125,19 @@ export function FeedCard({ note, queue, index, onOpenComments, album, onPlay, on
           >
             <LikeButton
               liked={liked}
-              count={note.likes + (liked ? 1 : 0)}
+              count={likeCount}
+              busy={likeBusy}
               label={note.title}
               className="feed-card__like"
               onClick={(e) => {
                 e.stopPropagation();
-                toggleLike(note.id);
+                void toggleLike();
               }}
             />
             <button
               type="button"
               className="feed-card__comments"
-              aria-label={`${note.comments} comments on ${note.title}`}
+              aria-label={`${commentCount} comments on ${note.title}`}
               title="View comments"
               onClick={(e) => {
                 e.stopPropagation();
@@ -141,7 +145,7 @@ export function FeedCard({ note, queue, index, onOpenComments, album, onPlay, on
               }}
             >
               <MessageCircle size={16} aria-hidden="true" />
-              <span className="tabular">{formatCount(note.comments)}</span>
+              <span className="tabular">{formatCount(commentCount)}</span>
             </button>
             {onRemove && (
               <button

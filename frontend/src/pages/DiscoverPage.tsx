@@ -1,11 +1,13 @@
 import { Compass } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { CommentsDrawer } from '../components/comments/CommentsDrawer';
 import { EmptyState } from '../components/common/EmptyState';
 import { TagPill } from '../components/common/TagPill';
 import { FeaturedPlayer } from '../components/player/FeaturedPlayer';
 import { FeaturedCard } from '../components/voiceNotes/FeaturedCard';
 import { TrackRow } from '../components/voiceNotes/TrackRow';
 import { mockTrendingTags } from '../data/mockTags';
+import type { VoiceNote } from '../data/types';
 import { useVoiceNotes } from '../hooks/useVoiceNotes';
 import { usePlayer } from '../state/PlayerContext';
 import './DiscoverPage.css';
@@ -15,6 +17,7 @@ const ROTATIONS = [1.2, -0.8, 0.6];
 export default function DiscoverPage() {
   const { featured, trending, recentlyPlayed, loading } = useVoiceNotes();
   const { current, select } = usePlayer();
+  const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
 
   // Pre-select the first featured VoiceNote once loaded (without autoplay)
   // so the featured player is always populated.
@@ -84,7 +87,7 @@ export default function DiscoverPage() {
             <div className="skeleton player-skeleton__bar" />
           </div>
         ) : playerNote ? (
-          <FeaturedPlayer note={playerNote} />
+          <FeaturedPlayer note={playerNote} onOpenComments={setCommentsNote} />
         ) : (
           <EmptyState icon={<Compass />} title="Choose a VoiceNote" />
         )}
@@ -135,7 +138,12 @@ export default function DiscoverPage() {
         ) : (
           <ul className="recent-list">
             {recentlyPlayed.map((note) => (
-              <TrackRow key={note.id} note={note} queue={recentlyPlayed} />
+              <TrackRow
+                key={note.id}
+                note={note}
+                queue={recentlyPlayed}
+                onOpenComments={setCommentsNote}
+              />
             ))}
           </ul>
         )}
@@ -152,6 +160,8 @@ export default function DiscoverPage() {
           ))}
         </div>
       </section>
+
+      <CommentsDrawer note={commentsNote} onClose={() => setCommentsNote(null)} />
     </div>
   );
 }

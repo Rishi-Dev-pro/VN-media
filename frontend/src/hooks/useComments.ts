@@ -1,49 +1,187 @@
-import { useEffect, useState } from 'react';
-import { getMockComments, type MockComment } from '../data/mockComments';
-import { DEMO_LISTENER, DEMO_NOW } from '../data/mockFollowing';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { MockComment } from '../data/mockComments';
+import type { AuthUser } from '../services/authRepository';
+import { createAuthRepository } from '../services/authRepository';
+import { createCommentRepository, type CommentRepository } from '../services/commentRepository';
+import { createNotificationRepository } from '../services/notificationRepository';
 
-const LATENCY = 520;
+/* ============================================================
+   Comments hook.
 
-/** Loads a mock thread for a VoiceNote and lets the user append locally. */
-export function useComments(noteId: string | null, releasedAt?: string) {
+   UI → hook → commentRepository → mock. The hook owns loading,
+   optimistic submit/edit/delete with rollback, and the current
+   user's identity (used for ownership + the composer avatar).
+   ============================================================ */
+
+const repo: CommentRepository = createCommentRepository();
+
+export function useComments(noteId: string | null) {
   const [comments, setComments] = useState<MockComment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
 
-  useEffect(() => {
-    if (!noteId) {
+  const noteRef = useRef(noteId);
+  noteRef.current = noteId;
+  const errorTimer = useRef<number | null>(null);
+
+  const load = useCallback(async () => {
+    const id = noteRef.current;
+    if (!id) {
       setComments([]);
       return;
     }
-    let active = true;
     setLoading(true);
-    setComments([]);
-    const t = window.setTimeout(() => {
-      if (!active) return;
-      setComments(getMockComments(noteId, releasedAt ?? new Date().toISOString()));
+    setLoadError(null);
+    try {
+      const list = await repo.getComments(id);
+      setComments(list);
+    } catch {
+      setLoadError('We couldn’t load this conversation.');
+    } finally {
       setLoading(false);
-    }, LATENCY);
+    }
+  }, []);
+
+  useEffect(() => {
+    setActionError(null);
+    void load();
+    return () => {
+      if (errorTimer.current) window.clearTimeout(errorTimer.current);
+    };
+  }, [noteId, load]);
+
+  // identity for ownership + the composer avatar
+  useEffect(() => {
+    let active = true;
+    void createAuthRepository()
+      .getCurrentUser()
+      .then((user) => {
+        if (active) setCurrentUser(user);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
-      window.clearTimeout(t);
     };
-  }, [noteId, releasedAt]);
+  }, []);
 
-  /** Append a comment from the demo listener (local state only). */
-  const addLocal = (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    const comment: MockComment = {
-      id: `local-${Date.now()}`,
-      authorName: DEMO_LISTENER.name,
-      authorHandle: DEMO_LISTENER.handle,
-      avatar: DEMO_LISTENER.avatar,
-      text: trimmed,
-      createdAt: new Date(DEMO_NOW).toISOString(),
-      likes: 0,
-      replies: 0,
-    };
-    setComments((prev) => [comment, ...prev]);
+  const clearActionError = useCallback(() => {
+    if (errorTimer.current) window.clearTimeout(errorTimer.current);
+    errorTimer.current = null;
+    setActionError(null);
+  }, []);
+
+  const fail = useCallback((msg: string) => {
+    setActionError(msg);
+    if (errorTimer.current) window.clearTimeout(errorTimer.current);
+    errorTimer.current = window.setTimeout(clearActionError, 2600);
+  }, [clearActionError]);
+
+  /** Optimistic submit — the comment appears, then the repo confirms. */
+  const submit = useCallback(
+    async (text: string, parentId?: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || !noteRef.current || !currentUser) return;
+      if (submitting) return;
+
+      const temp: MockComment = {
+        id: `pending-${Date.now()}`,
+        voiceNoteId: noteRef.current,
+        parentCommentId: parentId,
+        authorName: currentUser.name,
+        authorHandle: currentUser.handle,
+        avatar: currentUser.avatar,
+        text: trimmed,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        status: 'active',
+      };
+
+      setSubmitting(true);
+      clearActionError();
+      setComments((prev) => [temp, ...prev]);
+
+      try {
+        const saved = await repo.createComment(noteRef.current, {
+          text: trimmed,
+          parentId,
+          author: {
+            name: currentUser.name,
+            handle: currentUser.handle,
+            avatar: currentUser.avatar,
+          },
+        });
+        setComments((prev) => prev.map((c) => (c.id === temp.id ? saved : c)));
+        // one social graph: a comment emits the matching incoming event.
+        // Public notes only — the repository enforces that boundary.
+        createNotificationRepository().deliverComment(noteRef.current, trimmed);
+      } catch {
+        // rollback — remove the optimistic comment
+        setComments((prev) => prev.filter((c) => c.id !== temp.id));
+        fail('COULDN’T POST COMMENT.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [currentUser, submitting, clearActionError, fail],
+  );
+
+  /** Optimistic edit of one of the user's own comments. */
+  const update = useCallback(
+    async (commentId: string, text: string) => {
+      if (!currentUser) return;
+      const trimmed = text.trim();
+      const prev = comments.find((c) => c.id === commentId);
+      if (!prev || !trimmed || prev.status !== 'active') return;
+
+      setComments((cs) =>
+        cs.map((c) => (c.id === commentId ? { ...c, text: trimmed } : c)),
+      );
+      try {
+        await repo.updateComment(commentId, trimmed, currentUser.handle);
+      } catch {
+        setComments((cs) => cs.map((c) => (c.id === commentId ? prev : c)));
+        fail('COULDN’T SAVE COMMENT.');
+      }
+    },
+    [currentUser, comments, fail],
+  );
+
+  /** Optimistic soft-delete (text hidden, replies preserved). */
+  const remove = useCallback(
+    async (commentId: string) => {
+      if (!currentUser) return;
+      const prev = comments.find((c) => c.id === commentId);
+      if (!prev || prev.status === 'deleted') return;
+
+      setComments((cs) =>
+        cs.map((c) =>
+          c.id === commentId ? { ...c, status: 'deleted' as const, text: '' } : c,
+        ),
+      );
+      try {
+        await repo.deleteComment(commentId, currentUser.handle);
+      } catch {
+        setComments((cs) => cs.map((c) => (c.id === commentId ? prev : c)));
+        fail('COULDN’T DELETE COMMENT.');
+      }
+    },
+    [currentUser, comments, fail],
+  );
+
+  return {
+    comments,
+    loading,
+    loadError,
+    actionError,
+    submitting,
+    currentUser,
+    retry: load,
+    submit,
+    update,
+    remove,
+    clearActionError,
   };
-
-  return { comments, loading, addLocal };
 }

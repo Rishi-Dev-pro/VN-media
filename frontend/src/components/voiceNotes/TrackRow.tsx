@@ -3,6 +3,8 @@ import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import type { VoiceNote } from '../../data/types';
 import { getCreator } from '../../data/mockCreators';
+import { useCommentCount } from '../../hooks/useCommentCount';
+import { useEngagement } from '../../hooks/useEngagement';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatCount, formatTime } from '../../utils/format';
 import { Equalizer } from '../common/Equalizer';
@@ -17,19 +19,22 @@ interface TrackRowProps {
   index?: number;
   /** show a comment count stat — optional, kept off Discover's rows */
   showComments?: boolean;
+  /** open the comments UI for this note (optional — pages opt in) */
+  onOpenComments?: (note: VoiceNote) => void;
   /** notified when this note starts playing (optional — library records history) */
   onPlay?: (note: VoiceNote) => void;
   /** renders a remove-from-library action (optional) */
   onRemove?: (note: VoiceNote) => void;
 }
 
-export function TrackRow({ note, queue, index, showComments, onPlay, onRemove }: TrackRowProps) {
-  const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
+export function TrackRow({ note, queue, index, showComments, onOpenComments, onPlay, onRemove }: TrackRowProps) {
+  const { current, isPlaying, play, toggle } = usePlayer();
+  const { liked, busy: likeBusy, toggle: toggleLike } = useEngagement(note);
+  const commentCount = useCommentCount(note.id, note.comments);
   const creator = getCreator(note.creatorId);
 
   const isCurrent = current?.id === note.id;
   const playing = isCurrent && isPlaying;
-  const liked = isLiked(note.id);
 
   const activate = useCallback(() => {
     if (isCurrent) toggle();
@@ -84,21 +89,37 @@ export function TrackRow({ note, queue, index, showComments, onPlay, onRemove }:
           </Link>
         </span>
 
-        {showComments && (
-          <span className="track-row__stat" title={`${formatCount(note.comments)} comments`}>
-            <MessageCircle size={13} aria-hidden="true" />
-            <span className="tabular">{formatCount(note.comments)}</span>
-          </span>
-        )}
+        {showComments &&
+          (onOpenComments ? (
+            <button
+              type="button"
+              className="track-row__stat"
+              title={`${formatCount(commentCount)} comments`}
+              aria-label={`${commentCount} comments on ${note.title}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenComments(note);
+              }}
+            >
+              <MessageCircle size={13} aria-hidden="true" />
+              <span className="tabular">{formatCount(commentCount)}</span>
+            </button>
+          ) : (
+            <span className="track-row__stat" title={`${formatCount(commentCount)} comments`}>
+              <MessageCircle size={13} aria-hidden="true" />
+              <span className="tabular">{formatCount(commentCount)}</span>
+            </span>
+          ))}
 
         <span className="track-row__duration tabular">{formatTime(note.duration)}</span>
 
         <LikeButton
           liked={liked}
           iconOnly
+          busy={likeBusy}
           onClick={(e) => {
             e.stopPropagation();
-            toggleLike(note.id);
+            void toggleLike();
           }}
           label={note.title}
         />

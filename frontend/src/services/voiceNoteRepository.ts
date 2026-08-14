@@ -26,6 +26,10 @@ export interface VoiceNoteRepository {
   getRelated(note: VoiceNote, limit?: number): Promise<VoiceNote[]>;
   getCreators(): Promise<Creator[]>;
   getAlbums(): Promise<Album[]>;
+  /** persist a like (mock — fails deterministically with ?demo=like-error) */
+  likeVoiceNote(noteId: string): Promise<void>;
+  /** persist an unlike */
+  unlikeVoiceNote(noteId: string): Promise<void>;
 }
 
 /** Public discovery only — private VoiceNotes never leave the boundary. */
@@ -33,6 +37,12 @@ const isPublic = (n: VoiceNote) => (n.visibility ?? 'public') === 'public';
 
 /** Simulated network latency so loading states are real. */
 const delay = (ms = 700) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Deterministic demo switches — reproducible failures only. */
+function demo(flag: string): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('demo') === flag;
+}
 
 export const mockVoiceNoteRepository: VoiceNoteRepository = {
   async getFeatured() {
@@ -89,6 +99,16 @@ export const mockVoiceNoteRepository: VoiceNoteRepository = {
   async getAlbums() {
     await delay();
     return mockAlbums;
+  },
+
+  async likeVoiceNote() {
+    await delay(380);
+    if (demo('like-error')) throw new Error('Mock like failed (demo)');
+  },
+
+  async unlikeVoiceNote() {
+    await delay(340);
+    if (demo('like-error')) throw new Error('Mock unlike failed (demo)');
   },
 };
 

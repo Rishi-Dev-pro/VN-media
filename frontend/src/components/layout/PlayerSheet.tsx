@@ -1,6 +1,8 @@
 import { ChevronDown, MessageCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import { getCreator } from '../../data/mockCreators';
+import { useCommentCount } from '../../hooks/useCommentCount';
+import { useEngagement } from '../../hooks/useEngagement';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatCount, formatReleaseDate } from '../../utils/format';
 import { Avatar } from '../common/Avatar';
@@ -15,7 +17,9 @@ interface PlayerSheetProps {
 }
 
 export function PlayerSheet({ open, onClose }: PlayerSheetProps) {
-  const { current, isPlaying, toggleLike, isLiked } = usePlayer();
+  const { current, isPlaying } = usePlayer();
+  const { liked, likeCount, busy: likeBusy, toggle: toggleLike } = useEngagement(current);
+  const commentCount = useCommentCount(current?.id ?? null, current?.comments ?? 0);
 
   useEffect(() => {
     if (!open) return;
@@ -32,7 +36,6 @@ export function PlayerSheet({ open, onClose }: PlayerSheetProps) {
   if (!open || !current) return null;
 
   const creator = getCreator(current.creatorId);
-  const liked = isLiked(current.id);
 
   return (
     <div
@@ -76,13 +79,14 @@ export function PlayerSheet({ open, onClose }: PlayerSheetProps) {
         <div className="player-sheet__foot">
           <LikeButton
             liked={liked}
-            count={current.likes}
-            onClick={() => toggleLike(current.id)}
+            count={likeCount}
+            busy={likeBusy}
+            onClick={() => void toggleLike()}
             label={current.title}
           />
-          <span className="player-sheet__stat" title={`${formatCount(current.comments)} comments`}>
+          <span className="player-sheet__stat" title={`${formatCount(commentCount)} comments`}>
             <MessageCircle size={16} aria-hidden="true" />
-            <span className="tabular">{formatCount(current.comments)}</span>
+            <span className="tabular">{formatCount(commentCount)}</span>
           </span>
           <span className="player-sheet__date tabular">{formatReleaseDate(current.releasedAt)}</span>
         </div>

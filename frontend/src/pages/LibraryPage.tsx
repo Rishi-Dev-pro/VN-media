@@ -16,11 +16,12 @@ import {
   type ReactNode,
 } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { AlbumCard } from '../components/albums/AlbumCard';
+import { CommentsDrawer } from '../components/comments/CommentsDrawer';
 import { EmptyState } from '../components/common/EmptyState';
 import { Equalizer } from '../components/common/Equalizer';
 import { LikeButton } from '../components/common/LikeButton';
 import { MoreMenu } from '../components/common/MoreMenu';
-import { AlbumCard } from '../components/albums/AlbumCard';
 import { ContinueCard } from '../components/library/ContinueCard';
 import { FeedCard } from '../components/voiceNotes/FeedCard';
 import { getCreator } from '../data/mockCreators';
@@ -37,6 +38,7 @@ import {
 } from '../hooks/useLibrary';
 import type { AlbumSummary } from '../services/albumRepository';
 import type { RecentEntry } from '../services/libraryRepository';
+import { useEngagement } from '../hooks/useEngagement';
 import { usePlayer } from '../state/PlayerContext';
 import { formatRelative, formatTime } from '../utils/format';
 import './LibraryPage.css';
@@ -73,6 +75,7 @@ export default function LibraryPage() {
   const tab: Tab = TABS.some((t) => t.id === rawTab) ? (rawTab as Tab) : 'all';
 
   const [query, setQuery] = useState('');
+  const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
   const [noteSort, setNoteSort] = useState<NoteSort>('recentlyAdded');
   const [albumSort, setAlbumSort] = useState<AlbumSort>('recentlySaved');
   const [toast, setToast] = useState<string | null>(null);
@@ -293,6 +296,7 @@ export default function LibraryPage() {
                     index={i}
                     onPlay={(n) => recordPlay(n.id)}
                     onRemove={handleRemoveNote}
+                    onOpenComments={setCommentsNote}
                   />
                 ))}
               </div>
@@ -397,6 +401,7 @@ export default function LibraryPage() {
                     index={i}
                     onPlay={(n) => recordPlay(n.id)}
                     onRemove={handleRemoveNote}
+                    onOpenComments={setCommentsNote}
                   />
                 ))}
               </div>
@@ -448,6 +453,7 @@ export default function LibraryPage() {
                     queue={likedQueue}
                     index={i}
                     onPlay={(n) => recordPlay(n.id)}
+                    onOpenComments={setCommentsNote}
                   />
                 ))}
               </div>
@@ -588,6 +594,8 @@ export default function LibraryPage() {
           onConfirm={handleClear}
         />
       )}
+
+      <CommentsDrawer note={commentsNote} onClose={() => setCommentsNote(null)} />
     </div>
   );
 }
@@ -679,12 +687,12 @@ interface RecentRowProps {
 
 function RecentRow({ entry, queue, onPlay }: RecentRowProps) {
   const { note, playedAt, progress } = entry;
-  const { current, isPlaying, elapsed, play, toggle, isLiked, toggleLike } = usePlayer();
+  const { current, isPlaying, elapsed, play, toggle } = usePlayer();
+  const { liked, busy: likeBusy, toggle: toggleLike } = useEngagement(note);
   const creator = getCreator(note.creatorId);
 
   const isCurrent = current?.id === note.id;
   const playing = isCurrent && isPlaying;
-  const liked = isLiked(note.id);
   const pct = isCurrent && note.duration > 0 ? Math.min(elapsed / note.duration, 1) : progress;
 
   const activate = useCallback(() => {
@@ -736,9 +744,10 @@ function RecentRow({ entry, queue, onPlay }: RecentRowProps) {
         <LikeButton
           liked={liked}
           iconOnly
+          busy={likeBusy}
           onClick={(e) => {
             e.stopPropagation();
-            toggleLike(note.id);
+            void toggleLike();
           }}
           label={note.title}
         />

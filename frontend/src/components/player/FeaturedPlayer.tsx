@@ -1,6 +1,8 @@
 import { MessageCircle, Radio } from 'lucide-react';
 import type { VoiceNote } from '../../data/types';
 import { getCreator } from '../../data/mockCreators';
+import { useCommentCount } from '../../hooks/useCommentCount';
+import { useEngagement } from '../../hooks/useEngagement';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatCount, formatReleaseDate } from '../../utils/format';
 import { Avatar } from '../common/Avatar';
@@ -11,16 +13,19 @@ import './FeaturedPlayer.css';
 
 interface FeaturedPlayerProps {
   note: VoiceNote;
+  /** open the comments UI for this note (optional — pages opt in) */
+  onOpenComments?: (note: VoiceNote) => void;
 }
 
 /** The premium "now playing" panel — the visual focal point. */
-export function FeaturedPlayer({ note }: FeaturedPlayerProps) {
-  const { current, isPlaying, toggleLike, isLiked } = usePlayer();
+export function FeaturedPlayer({ note, onOpenComments }: FeaturedPlayerProps) {
+  const { current, isPlaying } = usePlayer();
+  const { liked, likeCount, busy: likeBusy, toggle: toggleLike } = useEngagement(note);
+  const commentCount = useCommentCount(note.id, note.comments);
   const creator = getCreator(note.creatorId);
 
   const isCurrent = current?.id === note.id;
   const playing = isCurrent && isPlaying;
-  const liked = isLiked(note.id);
 
   return (
     <section className="featured-player" aria-label="Now playing">
@@ -50,14 +55,28 @@ export function FeaturedPlayer({ note }: FeaturedPlayerProps) {
         <div className="featured-player__foot">
           <LikeButton
             liked={liked}
-            count={note.likes}
-            onClick={() => toggleLike(note.id)}
+            count={likeCount}
+            busy={likeBusy}
+            onClick={() => void toggleLike()}
             label={note.title}
           />
-          <span className="featured-player__stat" title={`${formatCount(note.comments)} comments`}>
-            <MessageCircle size={15} aria-hidden="true" />
-            <span className="tabular">{formatCount(note.comments)}</span>
-          </span>
+          {onOpenComments ? (
+            <button
+              type="button"
+              className="featured-player__stat"
+              title={`${formatCount(commentCount)} comments`}
+              aria-label={`${commentCount} comments on ${note.title}`}
+              onClick={() => onOpenComments(note)}
+            >
+              <MessageCircle size={15} aria-hidden="true" />
+              <span className="tabular">{formatCount(commentCount)}</span>
+            </button>
+          ) : (
+            <span className="featured-player__stat" title={`${formatCount(commentCount)} comments`}>
+              <MessageCircle size={15} aria-hidden="true" />
+              <span className="tabular">{formatCount(commentCount)}</span>
+            </span>
+          )}
           <span className="featured-player__date tabular">{formatReleaseDate(note.releasedAt)}</span>
           <Avatar src={creator.avatar} alt={creator.name} size={30} className="featured-player__avatar" />
         </div>

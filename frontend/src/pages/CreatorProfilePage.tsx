@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlbumCard } from '../components/albums/AlbumCard';
+import { CommentsDrawer } from '../components/comments/CommentsDrawer';
 import { EmptyState } from '../components/common/EmptyState';
 import { SharePanel } from '../components/common/SharePanel';
 import { FeedCard } from '../components/voiceNotes/FeedCard';
@@ -57,6 +58,7 @@ export default function CreatorProfilePage() {
 
   const [messaging, setMessaging] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
   const parallaxRef = useParallax<HTMLDivElement>(14, 10);
 
   const notes = useMemo(
@@ -303,7 +305,13 @@ export default function CreatorProfilePage() {
               {notes.length > 1 && (
                 <div className="creator-profile__list">
                   {notes.slice(1).map((note, i) => (
-                    <FeedCard key={note.id} note={note} queue={notes} index={i} />
+                    <FeedCard
+                      key={note.id}
+                      note={note}
+                      queue={notes}
+                      index={i}
+                      onOpenComments={setCommentsNote}
+                    />
                   ))}
                 </div>
               )}
@@ -362,6 +370,8 @@ export default function CreatorProfilePage() {
           </div>
         </section>
       )}
+
+      <CommentsDrawer note={commentsNote} onClose={() => setCommentsNote(null)} />
     </div>
   );
 }

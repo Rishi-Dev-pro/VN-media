@@ -2,9 +2,11 @@ import { ArrowLeft, Bookmark, Disc3, Lock, Play, UserPlus, UserCheck } from 'luc
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AlbumCard } from '../components/albums/AlbumCard';
+import { CommentsDrawer } from '../components/comments/CommentsDrawer';
 import { Avatar } from '../components/common/Avatar';
 import { MoreMenu } from '../components/common/MoreMenu';
 import { TrackRow } from '../components/voiceNotes/TrackRow';
+import type { VoiceNote } from '../data/types';
 import { useAlbum } from '../hooks/useAlbums';
 import { createAlbumRepository, type AlbumSummary } from '../services/albumRepository';
 import { useFollows } from '../state/FollowContext';
@@ -20,6 +22,7 @@ export default function AlbumDetailPage() {
   const { play } = usePlayer();
   const { isFollowing, toggleFollow } = useFollows();
   const [saved, setSaved] = useState(false);
+  const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
 
   const playAll = useCallback(() => {
     if (album && album.tracks.length > 0) play(album.tracks[0], album.tracks);
@@ -207,13 +210,22 @@ export default function AlbumDetailPage() {
         </header>
         <ul className="album-detail__list">
           {album.tracks.map((note, i) => (
-            <TrackRow key={note.id} note={note} queue={album.tracks} index={i + 1} showComments />
+            <TrackRow
+              key={note.id}
+              note={note}
+              queue={album.tracks}
+              index={i + 1}
+              showComments
+              onOpenComments={setCommentsNote}
+            />
           ))}
         </ul>
       </section>
 
       {/* ---- related ---- */}
       <RelatedAlbums albumId={album.id} />
+
+      <CommentsDrawer note={commentsNote} onClose={() => setCommentsNote(null)} />
     </div>
   );
 }

@@ -43,6 +43,11 @@
   letter-spacing: 0.02em;
 }
 
+.like-btn.is-busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .like-btn.is-liked {
   color: var(--pink);
 }

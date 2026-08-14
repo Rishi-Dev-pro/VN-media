@@ -2,6 +2,7 @@ import { Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
 import type { VoiceNote } from '../../data/types';
 import { getCreator } from '../../data/mockCreators';
+import { useEngagement } from '../../hooks/useEngagement';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatTime } from '../../utils/format';
 import { Equalizer } from '../common/Equalizer';
@@ -20,12 +21,12 @@ interface FeaturedCardProps {
 }
 
 export function FeaturedCard({ note, queue, rotation = 0, cascade = false, onActivate }: FeaturedCardProps) {
-  const { current, isPlaying, play, toggle, toggleLike, isLiked } = usePlayer();
+  const { current, isPlaying, play, toggle } = usePlayer();
+  const { liked, busy: likeBusy, toggle: toggleLike } = useEngagement(note);
   const creator = getCreator(note.creatorId);
 
   const isCurrent = current?.id === note.id;
   const playing = isCurrent && isPlaying;
-  const liked = isLiked(note.id);
 
   const activate = useCallback(() => {
     if (onActivate) return onActivate();
@@ -77,9 +78,10 @@ export function FeaturedCard({ note, queue, rotation = 0, cascade = false, onAct
         <LikeButton
           liked={liked}
           iconOnly
+          busy={likeBusy}
           onClick={(e) => {
             e.stopPropagation();
-            toggleLike(note.id);
+            void toggleLike();
           }}
           label={note.title}
         />

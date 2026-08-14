@@ -6,6 +6,7 @@ import {
   type NotificationType,
 } from '../data/notifications';
 import { DEMO_NOW } from '../data/mockFollowing';
+import { voiceNotesById } from '../data/mockVoiceNotes';
 
 /* ============================================================
    Notification repository boundary.
@@ -30,6 +31,10 @@ export interface NotificationRepository {
   startSimulation(): void;
   /** deliver a deterministic incoming follow event (mock transport boundary) */
   deliverFollow(actorCreatorId: string): void;
+  /** deliver a like event for a VoiceNote (public notes only) */
+  deliverLike(voiceNoteId: string): void;
+  /** deliver a comment event for a VoiceNote (public notes only) */
+  deliverComment(voiceNoteId: string, preview: string): void;
 }
 
 const delay = (ms = 460) => new Promise<void>((r) => setTimeout(r, ms));
@@ -102,6 +107,22 @@ export const mockNotificationRepository: NotificationRepository = {
 
   deliverFollow(actorCreatorId) {
     ingest('USER_FOLLOWED', { actorId: actorCreatorId });
+  },
+
+  deliverLike(voiceNoteId) {
+    const note = voiceNotesById[voiceNoteId];
+    if (!note || (note.visibility ?? 'public') !== 'public') return;
+    ingest('VOICE_NOTE_LIKED', { actorId: note.creatorId, voiceNoteId });
+  },
+
+  deliverComment(voiceNoteId, preview) {
+    const note = voiceNotesById[voiceNoteId];
+    if (!note || (note.visibility ?? 'public') !== 'public') return;
+    ingest('VOICE_NOTE_COMMENTED', {
+      actorId: note.creatorId,
+      voiceNoteId,
+      commentPreview: preview.slice(0, 90),
+    });
   },
 
   startSimulation() {
