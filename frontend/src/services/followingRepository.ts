@@ -68,7 +68,10 @@ export const mockFollowingRepository: FollowingRepository = {
     }));
 
     const notes = mockVoiceNotes
-      .filter((n) => followed.has(n.creatorId))
+      .filter(
+        (n) =>
+          followed.has(n.creatorId) && (n.visibility ?? 'public') === 'public',
+      )
       .sort((a, b) => +new Date(b.releasedAt) - +new Date(a.releasedAt));
 
     const newThisWeek = notes.filter((n) => DEMO_NOW - +new Date(n.releasedAt) <= WEEK).length;

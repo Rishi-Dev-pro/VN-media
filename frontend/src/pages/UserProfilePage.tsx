@@ -1,6 +1,6 @@
-import { Calendar, Check, Edit3, Headphones, Share2, X } from 'lucide-react';
+import { Calendar, Check, Edit3, Headphones, PlusCircle, Share2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from '../components/common/Avatar';
 import { SharePanel } from '../components/common/SharePanel';
 import { mockCreators } from '../data/mockCreators';
@@ -36,6 +36,7 @@ function formatJoined(iso: string): string {
 }
 
 export default function UserProfilePage() {
+  const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -168,7 +169,14 @@ export default function UserProfilePage() {
           <div className="user-profile__actions">
             <button
               type="button"
-              className="btn btn--primary user-profile__edit"
+              className="btn btn--primary user-profile__create"
+              onClick={() => navigate('/create')}
+            >
+              <PlusCircle size={15} aria-hidden="true" /> Create VoiceNote
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost user-profile__edit"
               onClick={() => setEditOpen(true)}
               aria-haspopup="dialog"
             >

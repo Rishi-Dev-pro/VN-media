@@ -185,6 +185,21 @@ export const mockCreators: Creator[] = [
     joinedAt: '2026-05-14T00:00:00Z',
     tint: '#a3b18a',
   },
+  {
+    /* the demo listener's own creator record — the studio publishes
+       under this identity. Public profile fields mirror auth state. */
+    id: 'crea-you',
+    handle: 'you',
+    name: 'You',
+    avatar: '/images/portrait-7.jpg',
+    heroImage: '/images/headphones-dark.jpg',
+    bio: 'A quiet listener with a library full of night sounds — and a habit of following every voice that makes the city feel smaller.',
+    followers: 0,
+    following: 0,
+    tags: ['listener', 'quiet', 'night sounds'],
+    joinedAt: '2026-08-11T00:00:00Z',
+    tint: '#9fd4e8',
+  },
 ];
 
 export const creatorsById: Record<string, Creator> = Object.fromEntries(
@@ -198,3 +213,5 @@ export function getCreator(id: string): Creator {
 export function getCreatorByHandle(handle: string): Creator | undefined {
   return mockCreators.find((c) => c.handle === handle);
 }
+
+export const SELF_CREATOR_ID = 'crea-you';

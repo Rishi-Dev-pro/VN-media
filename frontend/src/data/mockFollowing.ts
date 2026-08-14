@@ -45,10 +45,11 @@ export const followingRailOrder: string[] = [
   'crea-nocturne',
 ];
 
-/** All VoiceNotes from a given creator, newest first. */
+/** All public VoiceNotes from a given creator, newest first.
+ *  Private VoiceNotes never surface on public creator pages. */
 export function notesByCreator(creatorId: string) {
   return mockVoiceNotes
-    .filter((n) => n.creatorId === creatorId)
+    .filter((n) => n.creatorId === creatorId && (n.visibility ?? 'public') === 'public')
     .sort((a, b) => +new Date(b.releasedAt) - +new Date(a.releasedAt));
 }
 

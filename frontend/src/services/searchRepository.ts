@@ -59,7 +59,9 @@ function bestScore(fields: string[], q: string, multiplier = 1): number {
 }
 
 function rankNotes(q: string): VoiceNote[] {
+  // private VoiceNotes never appear in public search
   return mockVoiceNotes
+    .filter((n) => (n.visibility ?? 'public') === 'public')
     .map((n) => {
       const creator = mockCreators.find((c) => c.id === n.creatorId);
       const score = Math.max(

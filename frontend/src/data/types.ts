@@ -50,6 +50,8 @@ export interface VoiceNote {
   releasedAt: string;
   /** Shown in the curated "Featured" rail */
   featured?: boolean;
+  /** Public by default; private notes never surface in public discovery */
+  visibility?: 'public' | 'private';
 }
 
 export interface Album {

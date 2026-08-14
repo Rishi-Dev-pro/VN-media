@@ -28,6 +28,9 @@ export interface VoiceNoteRepository {
   getAlbums(): Promise<Album[]>;
 }
 
+/** Public discovery only — private VoiceNotes never leave the boundary. */
+const isPublic = (n: VoiceNote) => (n.visibility ?? 'public') === 'public';
+
 /** Simulated network latency so loading states are real. */
 const delay = (ms = 700) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -36,12 +39,13 @@ export const mockVoiceNoteRepository: VoiceNoteRepository = {
     await delay();
     return featuredOrder
       .map((id) => voiceNotesById[id])
-      .filter(Boolean);
+      .filter((n): n is VoiceNote => Boolean(n) && isPublic(n));
   },
 
   async getTrending() {
     await delay(620);
     return [...mockVoiceNotes]
+      .filter(isPublic)
       .sort((a, b) => b.plays - a.plays)
       .slice(0, 6);
   },
@@ -49,6 +53,7 @@ export const mockVoiceNoteRepository: VoiceNoteRepository = {
   async getNewest() {
     await delay(580);
     return [...mockVoiceNotes]
+      .filter(isPublic)
       .sort((a, b) => +new Date(b.releasedAt) - +new Date(a.releasedAt))
       .slice(0, 6);
   },
@@ -57,7 +62,7 @@ export const mockVoiceNoteRepository: VoiceNoteRepository = {
     await delay(480);
     return recentlyPlayedIds
       .map((id) => voiceNotesById[id])
-      .filter(Boolean);
+      .filter((n): n is VoiceNote => Boolean(n));
   },
 
   async getById(id) {
@@ -70,6 +75,7 @@ export const mockVoiceNoteRepository: VoiceNoteRepository = {
     const related = mockVoiceNotes.filter(
       (v) =>
         v.id !== note.id &&
+        isPublic(v) &&
         (v.category === note.category || v.tags.some((t) => note.tags.includes(t))),
     );
     return related.slice(0, limit);

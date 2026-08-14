@@ -1,7 +1,8 @@
 import type { Creator } from '../data/types';
 import { mockAlbums } from '../data/mockAlbums';
-import { mockCreators, creatorsById } from '../data/mockCreators';
+import { mockCreators, creatorsById, SELF_CREATOR_ID } from '../data/mockCreators';
 import { notesByCreator } from '../data/mockFollowing';
+import { createAuthRepository } from './authRepository';
 
 /* ============================================================
    Repository boundary.
@@ -45,29 +46,54 @@ function profile(c: Creator): CreatorProfile {
   };
 }
 
+const isSelf = (c: Creator) => c.id === SELF_CREATOR_ID;
+
+/**
+ * The current user's creator identity mirrors the editable /profile
+ * state (handle, name, avatar, bio) so the studio and the public
+ * profile page stay one person.
+ */
+async function selfProfile(): Promise<CreatorProfile | null> {
+  const auth = await createAuthRepository().getCurrentUser().catch(() => null);
+  if (!auth) return null;
+  const base = mockCreators.find(isSelf);
+  if (!base) return null;
+  return profile({
+    ...base,
+    name: auth.name,
+    handle: auth.handle,
+    avatar: auth.avatar,
+    bio: auth.bio ?? base.bio,
+  });
+}
+
 export const mockCreatorRepository: CreatorRepository = {
   async getCreators() {
     await delay();
-    return mockCreators.map(profile);
+    // the current user's own room isn't listed among "discoverable creators"
+    return mockCreators.filter((c) => !isSelf(c)).map(profile);
   },
 
   async getFeatured() {
     await delay(540);
-    const featured = mockCreators.find((c) => c.featured);
+    const featured = mockCreators.find((c) => c.featured && !isSelf(c));
     return featured ? profile(featured) : null;
   },
 
   async getByUsername(handle) {
     await delay(520);
-    const creator = mockCreators.find((c) => c.handle === handle);
+    const self = await selfProfile();
+    if (self && self.handle === handle) return self;
+    const creator = mockCreators.find((c) => c.handle === handle && !isSelf(c));
     return creator ? profile(creator) : null;
   },
 
   async searchCreators(query) {
     await delay(380);
     const q = query.trim().toLowerCase();
-    if (!q) return mockCreators.map(profile);
+    if (!q) return mockCreators.filter((c) => !isSelf(c)).map(profile);
     return mockCreators
+      .filter((c) => !isSelf(c))
       .filter(
         (c) =>
           c.handle.toLowerCase().includes(q) ||

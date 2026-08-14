@@ -462,6 +462,16 @@ export const voiceNotesById: Record<string, VoiceNote> = Object.fromEntries(
   mockVoiceNotes.map((v) => [v.id, v]),
 );
 
+/**
+ * Session-local catalog mutation used by the creation repository when a
+ * VoiceNote is published. One source of truth: every surface that reads
+ * `mockVoiceNotes` / `voiceNotesById` picks the new note up automatically.
+ */
+export function addVoiceNote(note: VoiceNote): void {
+  mockVoiceNotes.unshift(note);
+  voiceNotesById[note.id] = note;
+}
+
 /** Default queue for the featured player. */
 export const featuredOrder: string[] = [
   'vn-midnight-frequency',
