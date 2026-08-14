@@ -2,11 +2,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { initialFollowing } from '../data/mockFollowing';
+import { createNotificationRepository } from '../services/notificationRepository';
 
 /* ============================================================
    Shared follow state (local, demo).
@@ -29,13 +32,23 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     () => new Set(initialFollowing),
   );
 
+  // live mirror so the follow side effect never reads a stale closure
+  const followingRef = useRef(followingIds);
+  useEffect(() => {
+    followingRef.current = followingIds;
+  }, [followingIds]);
+
   const toggleFollow = useCallback((creatorId: string) => {
+    const isAdding = !followingRef.current.has(creatorId);
     setFollowingIds((prev) => {
       const next = new Set(prev);
       if (next.has(creatorId)) next.delete(creatorId);
       else next.add(creatorId);
       return next;
     });
+    // one social graph: following a creator emits the matching
+    // incoming event through the notification boundary.
+    if (isAdding) createNotificationRepository().deliverFollow(creatorId);
   }, []);
 
   const isFollowing = useCallback(

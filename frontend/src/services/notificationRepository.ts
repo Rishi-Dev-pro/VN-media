@@ -28,6 +28,8 @@ export interface NotificationRepository {
   subscribe(listener: () => void): () => void;
   /** start the scripted incoming-event simulation (once) */
   startSimulation(): void;
+  /** deliver a deterministic incoming follow event (mock transport boundary) */
+  deliverFollow(actorCreatorId: string): void;
 }
 
 const delay = (ms = 460) => new Promise<void>((r) => setTimeout(r, ms));
@@ -96,6 +98,10 @@ export const mockNotificationRepository: NotificationRepository = {
     return () => {
       listeners.delete(listener);
     };
+  },
+
+  deliverFollow(actorCreatorId) {
+    ingest('USER_FOLLOWED', { actorId: actorCreatorId });
   },
 
   startSimulation() {

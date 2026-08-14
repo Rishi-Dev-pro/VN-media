@@ -1,0 +1,104 @@
+/* ============================================================
+   SHARE PANEL — small glass popover for copying a profile link
+   or username. Same surface language as the rest of VN-Media.
+   ============================================================ */
+
+.share-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 230px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(20, 20, 26, 0.92);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-frame), 0 18px 44px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: share-in var(--dur-fast) var(--ease-out) backwards;
+}
+
+@keyframes share-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.share-panel__title {
+  color: var(--text-3);
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.share-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.share-panel__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.share-panel__item:hover,
+.share-panel__item:focus-visible {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.share-panel__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.share-panel__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color: var(--accent-strong);
+  background: var(--accent-dim);
+  flex-shrink: 0;
+}
+
+.share-panel__hint {
+  margin-top: 10px;
+  padding-left: 4px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  min-height: 1em;
+}
+
+@media (max-width: 479px) {
+  /* on narrow screens the Share button often wraps to the left edge;
+     anchor the panel leftward so it never spills off-screen */
+  .share-panel {
+    left: 0;
+    right: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-panel {
+    animation: none;
+  }
+}

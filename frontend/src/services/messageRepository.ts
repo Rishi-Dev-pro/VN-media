@@ -38,6 +38,8 @@ export interface ConversationSummary {
 export interface MessageRepository {
   getConversations(): Promise<ConversationSummary[]>;
   getMessages(conversationId: string): Promise<ChatMessage[]>;
+  /** reuse an existing thread with this creator, or start a fresh one */
+  getOrCreateConversation(creatorId: string): Promise<string>;
   sendTextMessage(conversationId: string, content: string): Promise<ChatMessage>;
   sendAudioMessage(conversationId: string, duration: number): Promise<ChatMessage>;
   deleteMessage(conversationId: string, messageId: string): Promise<void>;
@@ -147,6 +149,16 @@ export const mockMessageRepository: MessageRepository = {
   async getMessages(conversationId) {
     await delay(420);
     return [...(stateMessages[conversationId] ?? [])];
+  },
+
+  async getOrCreateConversation(creatorId) {
+    await delay(260);
+    const existing = stateConversations.find((c) => c.creatorId === creatorId);
+    if (existing) return existing.id;
+    const id = `conv-${creatorId.replace('crea-', '')}`;
+    stateConversations.push({ id, creatorId, unread: 0 });
+    stateMessages[id] = [];
+    return id;
   },
 
   async sendTextMessage(conversationId, content) {

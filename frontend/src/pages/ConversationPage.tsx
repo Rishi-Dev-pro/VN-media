@@ -5,8 +5,7 @@ import { ConversationHeader } from '../components/messages/ConversationHeader';
 import { ConversationList } from '../components/messages/ConversationList';
 import { MessageBubble } from '../components/messages/MessageBubble';
 import { MessageComposer } from '../components/messages/MessageComposer';
-import { getCreator } from '../data/mockCreators';
-import { conversationById, type ChatMessage } from '../data/messages';
+import type { ChatMessage } from '../data/messages';
 import { DEMO_NOW } from '../data/mockFollowing';
 import { useMessages, useConversation } from '../hooks/useMessages';
 import { formatReleaseDate } from '../utils/format';
@@ -39,8 +38,10 @@ export default function ConversationPage() {
     clearConversation,
   } = useConversation(conversationId);
 
-  const conversation = conversationId ? conversationById[conversationId] : undefined;
-  const creator = conversation ? getCreator(conversation.creatorId) : undefined;
+  // resolve through the repository's conversation list so threads
+  // created this session (e.g. Message on a creator profile) resolve too
+  const conversation = conversations.find((c) => c.id === conversationId);
+  const creator = conversation?.creator;
   const activeNow = conversation ? ACTIVE_NOW.has(conversation.creatorId) : false;
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -141,6 +142,28 @@ export default function ConversationPage() {
     setClearOpen(false);
     showToast('CONVERSATION CLEARED');
   }, [clearConversation, showToast]);
+
+  // the thread resolves from the repository list — brief skeleton while it loads
+  if (listLoading) {
+    return (
+      <div className="conversation-page">
+        <div className="conversation-page__list">
+          <ConversationList conversations={conversations} loading={true} activeId={conversationId} />
+        </div>
+        <section className="conversation-panel" aria-label="Loading conversation" aria-busy="true">
+          <div className="conversation-messages" aria-hidden="true">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div
+                key={i}
+                className={`skeleton msg-sk ${i % 2 === 0 ? 'msg-sk--mine' : ''}`}
+                style={{ width: `${38 + ((i * 13) % 34)}%` }}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   if (!conversation || !creator) {
     return (

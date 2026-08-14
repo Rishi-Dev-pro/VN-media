@@ -1,3 +1,5 @@
+import { mockCreators } from '../data/mockCreators';
+
 /* ============================================================
    Auth repository boundary.
 
@@ -13,6 +15,16 @@ export interface AuthUser {
   handle: string;
   name: string;
   avatar: string;
+  /** public short bio (editable on /profile) */
+  bio?: string;
+}
+
+/** Editable public profile fields. */
+export interface ProfileInput {
+  handle?: string;
+  name?: string;
+  avatar?: string;
+  bio?: string;
 }
 
 export type AuthResult =
@@ -28,10 +40,34 @@ export interface RegisterInput {
 export interface AuthRepository {
   signIn(email: string, password: string): Promise<AuthResult>;
   register(input: RegisterInput): Promise<AuthResult>;
+  /** the signed-in demo listener (session-local) */
+  getCurrentUser(): Promise<AuthUser>;
+  /** validate + persist public profile edits (mock-only) */
+  updateCurrentUser(input: ProfileInput): Promise<AuthResult>;
 }
 
 /** Simulated network latency. */
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/* ---------- session-local current user ---------- */
+
+let currentUser: AuthUser = {
+  handle: 'you',
+  name: 'You',
+  avatar: '/images/portrait-7.jpg',
+  bio: 'A quiet listener with a library full of night sounds — and a habit of following every voice that makes the city feel smaller.',
+};
+
+/** Deterministic username rules mirroring Register + mock uniqueness. */
+function validateHandle(handle: string): string | null {
+  const h = handle.trim().toLowerCase();
+  if (!h) return 'USERNAME IS REQUIRED.';
+  if (h.length < 3) return 'USERNAME MUST BE AT LEAST 3 CHARACTERS.';
+  if (!/^[a-z0-9._-]+$/i.test(h)) return 'USE LETTERS, NUMBERS, DOTS, DASHES OR UNDERSCORES ONLY.';
+  if (h === 'taken') return 'USERNAME ALREADY EXISTS.';
+  if (mockCreators.some((c) => c.handle.toLowerCase() === h)) return 'USERNAME ALREADY EXISTS.';
+  return null;
+}
 
 /**
  * Local demo implementation.
@@ -53,12 +89,32 @@ export const mockAuthRepository: AuthRepository = {
     void password;
     return {
       ok: true,
-      user: {
-        handle: 'you',
-        name: 'You',
-        avatar: '/images/portrait-7.jpg',
-      },
+      user: { ...currentUser },
     };
+  },
+
+  async getCurrentUser() {
+    await delay(420);
+    return { ...currentUser };
+  },
+
+  async updateCurrentUser(input) {
+    await delay(760);
+
+    if (input.handle !== undefined) {
+      const problem = validateHandle(input.handle);
+      if (problem) {
+        return { ok: false, error: problem };
+      }
+    }
+
+    currentUser = {
+      handle: input.handle?.trim().toLowerCase() ?? currentUser.handle,
+      name: input.name?.trim() || currentUser.name,
+      avatar: input.avatar ?? currentUser.avatar,
+      bio: input.bio?.trim() || currentUser.bio,
+    };
+    return { ok: true, user: { ...currentUser } };
   },
 
   async register({ username, email, password }) {

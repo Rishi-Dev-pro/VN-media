@@ -15,6 +15,7 @@ import LibraryPage from './pages/LibraryPage';
 import MessagesPage from './pages/MessagesPage';
 import ConversationPage from './pages/ConversationPage';
 import NotificationsPage from './pages/NotificationsPage';
+import UserProfilePage from './pages/UserProfilePage';
 import LandingPage from './pages/landing/LandingPage';
 import { FollowProvider } from './state/FollowContext';
 import { NotificationProvider } from './state/NotificationContext';
@@ -31,7 +32,7 @@ function ScrollToTop() {
 }
 
 /** App views that render elegant placeholders until their phase lands. */
-const PLACEHOLDER_VIEWS: View[] = ['profile', 'create'];
+const PLACEHOLDER_VIEWS: View[] = ['create'];
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/messages/:conversationId" element={<ConversationPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/profile" element={<UserProfilePage />} />
           {PLACEHOLDER_VIEWS.map((v) => (
             <Route key={v} path={`/${v}`} element={<PlaceholderPage view={v} />} />
           ))}
