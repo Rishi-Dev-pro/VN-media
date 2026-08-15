@@ -27,15 +27,46 @@ interface FollowState {
 
 const FollowContext = createContext<FollowState | null>(null);
 
+/* Best-effort sessionStorage mirror so the follow graph survives a hard
+ * refresh within the same tab. Structural only — no backend. */
+const FOLLOWS_STORAGE_KEY = 'vn.follows.session.v1';
+
+function loadPersistedFollows(): string[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(FOLLOWS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || !parsed.every((id) => typeof id === 'string')) {
+      return null;
+    }
+    return parsed as string[];
+  } catch {
+    return null;
+  }
+}
+
 export function FollowProvider({ children }: { children: ReactNode }) {
   const [followingIds, setFollowingIds] = useState<Set<string>>(
-    () => new Set(initialFollowing),
+    () => new Set(loadPersistedFollows() ?? initialFollowing),
   );
 
   // live mirror so the follow side effect never reads a stale closure
   const followingRef = useRef(followingIds);
   useEffect(() => {
     followingRef.current = followingIds;
+  }, [followingIds]);
+
+  // persist the follow graph whenever it changes
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(
+        FOLLOWS_STORAGE_KEY,
+        JSON.stringify([...followingIds]),
+      );
+    } catch {
+      // storage unavailable — persistence is best-effort
+    }
   }, [followingIds]);
 
   const toggleFollow = useCallback((creatorId: string) => {

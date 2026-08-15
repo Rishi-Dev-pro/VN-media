@@ -94,11 +94,71 @@ const initialRecents: RecentSeed[] = [
   { id: 'vn-harbor-whistle', playedAt: DEMO_NOW - 5 * DAY, progress: 0.4 },
 ];
 
-/* ----- session-local mutable state ----- */
+/* ----- session persistence -----
+ * Best-effort sessionStorage mirror of the demo listener's library so
+ * saved items and Recently Played survive a hard refresh within the
+ * same tab. Structural only — no backend, no secrets. */
+const LIBRARY_STORAGE_KEY = 'vn.library.session.v1';
 
-const savedNotes: SavedItem[] = [...initialSavedNotes];
-const savedAlbums: SavedItem[] = [...initialSavedAlbums];
-const recents: RecentSeed[] = [...initialRecents];
+interface PersistedLibrary {
+  savedNotes: SavedItem[];
+  savedAlbums: SavedItem[];
+  recents: RecentSeed[];
+}
+
+function loadPersistedLibrary(): PersistedLibrary | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(LIBRARY_STORAGE_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as PersistedLibrary;
+    const validSaved = (arr?: unknown): arr is SavedItem[] =>
+      Array.isArray(arr) &&
+      arr.every(
+        (s) => s && typeof s.id === 'string' && typeof s.savedAt === 'number',
+      );
+    const validRecents = (arr?: unknown): arr is RecentSeed[] =>
+      Array.isArray(arr) &&
+      arr.every(
+        (r) =>
+          r &&
+          typeof r.id === 'string' &&
+          typeof r.playedAt === 'number' &&
+          typeof r.progress === 'number',
+      );
+    if (!validSaved(p.savedNotes) || !validSaved(p.savedAlbums) || !validRecents(p.recents)) {
+      return null;
+    }
+    return p;
+  } catch {
+    return null;
+  }
+}
+
+function persistLibrary(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(
+      LIBRARY_STORAGE_KEY,
+      JSON.stringify({ savedNotes, savedAlbums, recents } satisfies PersistedLibrary),
+    );
+  } catch {
+    // storage unavailable — persistence is best-effort
+  }
+}
+
+/* ----- session-local mutable state (hydrated from the session) ----- */
+
+const persistedLibrary = loadPersistedLibrary();
+const savedNotes: SavedItem[] = persistedLibrary
+  ? persistedLibrary.savedNotes
+  : [...initialSavedNotes];
+const savedAlbums: SavedItem[] = persistedLibrary
+  ? persistedLibrary.savedAlbums
+  : [...initialSavedAlbums];
+const recents: RecentSeed[] = persistedLibrary
+  ? persistedLibrary.recents
+  : [...initialRecents];
 
 const albumRepo = createAlbumRepository();
 
@@ -141,12 +201,14 @@ export const mockLibraryRepository: LibraryRepository = {
     await delay(240);
     const i = savedNotes.findIndex((s) => s.id === noteId);
     if (i >= 0) savedNotes.splice(i, 1);
+    persistLibrary();
   },
 
   async removeSavedAlbum(albumId) {
     await delay(240);
     const i = savedAlbums.findIndex((s) => s.id === albumId);
     if (i >= 0) savedAlbums.splice(i, 1);
+    persistLibrary();
   },
 
   async recordPlay(noteId) {
@@ -155,6 +217,7 @@ export const mockLibraryRepository: LibraryRepository = {
     if (i >= 0) recents.splice(i, 1);
     recents.unshift({ id: noteId, playedAt: Date.now(), progress: 0 });
     if (recents.length > 12) recents.length = 12;
+    persistLibrary();
   },
 
   async recordProgress(noteId, progress) {
@@ -167,11 +230,13 @@ export const mockLibraryRepository: LibraryRepository = {
       progress: Math.min(1, Math.max(0, progress)),
     });
     if (recents.length > 12) recents.length = 12;
+    persistLibrary();
   },
 
   async clearRecentlyPlayed() {
     await delay(240);
     recents.length = 0;
+    persistLibrary();
   },
 };
 
