@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { VoiceNote } from '../data/types';
+import { voiceNotesById } from '../data/mockVoiceNotes';
 import { ambientAudio } from '../utils/ambientAudio';
 import { hashString, seededShuffle } from '../utils/seeded';
 
@@ -82,6 +83,65 @@ const initialState: PlayerState = {
   queueLabel: null,
 };
 
+/* ---------- session persistence ----------
+ * Lightweight, deterministic playback persistence: the queue, current
+ * VoiceNote, position, and player modes survive a hard refresh within the
+ * same tab session. Best-effort — storage failures silently fall back to
+ * the initial state. Never persisted to the backend. */
+const STORAGE_KEY = 'vn.player.session.v1';
+
+interface PersistedPlayer {
+  currentId: string | null;
+  queueIds: string[];
+  queueIndex: number;
+  elapsed: number;
+  volume: number;
+  speed: number;
+  shuffle: boolean;
+  repeat: RepeatMode;
+  queueLabel: string | null;
+  likedIds: string[];
+}
+
+function loadPersisted(): PersistedPlayer | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedPlayer;
+    if (!Array.isArray(parsed.queueIds) || typeof parsed.currentId !== 'string') {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve a saved session into real VoiceNotes; fall back to defaults. */
+function hydrateInitialState(): PlayerState {
+  const saved = loadPersisted();
+  if (!saved) return initialState;
+  const queue = saved.queueIds
+    .map((id) => voiceNotesById[id])
+    .filter((n): n is VoiceNote => Boolean(n));
+  const current = queue[saved.queueIndex] ?? null;
+  if (!current) return initialState;
+  return {
+    ...initialState,
+    current,
+    queue,
+    queueIndex: saved.queueIndex,
+    elapsed: Math.min(Math.max(0, saved.elapsed), current.duration),
+    volume: Math.min(Math.max(0, saved.volume), 1),
+    speed: saved.speed > 0 ? saved.speed : 1,
+    shuffle: Boolean(saved.shuffle),
+    repeat: saved.repeat ?? 'off',
+    queueLabel: saved.queueLabel ?? null,
+    likedIds: new Set(saved.likedIds?.length ? saved.likedIds : initialState.likedIds),
+  };
+}
+
 /* ---------- deterministic demo switch ---------- */
 let errorArmed = false;
 /** `?demo=player-error` fails the FIRST playback action; retry recovers
@@ -128,7 +188,7 @@ function withShuffle(
 }
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<PlayerState>(initialState);
+  const [state, setState] = useState<PlayerState>(hydrateInitialState);
 
   // Keep a live mirror for the rAF loop without stale closures.
   const stateRef = useRef(state);
@@ -197,6 +257,59 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.isPlaying, state.current?.id, state.playbackError]);
+
+  /* ---------- persistence ---------- */
+  const saveSession = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.current) return;
+    try {
+      window.sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          currentId: s.current.id,
+          queueIds: s.queue.map((n) => n.id),
+          queueIndex: s.queueIndex,
+          elapsed: s.elapsed,
+          volume: s.volume,
+          speed: s.speed,
+          shuffle: s.shuffle,
+          repeat: s.repeat,
+          queueLabel: s.queueLabel,
+          likedIds: [...s.likedIds],
+        } satisfies PersistedPlayer),
+      );
+    } catch {
+      // storage unavailable — persistence is best-effort
+    }
+  }, []);
+
+  // structural changes (track, queue, modes) persist immediately
+  useEffect(() => {
+    saveSession();
+  }, [
+    state.current?.id,
+    state.queue,
+    state.queueIndex,
+    state.volume,
+    state.speed,
+    state.shuffle,
+    state.repeat,
+    state.queueLabel,
+    state.likedIds,
+    saveSession,
+  ]);
+
+  // position persists on pause and (throttled) while playing
+  const lastPosSave = useRef(0);
+  useEffect(() => {
+    const s = stateRef.current;
+    if (!s.current) return;
+    const now = Date.now();
+    if (!s.isPlaying || now - lastPosSave.current >= 1500) {
+      lastPosSave.current = now;
+      saveSession();
+    }
+  }, [state.elapsed, state.isPlaying, saveSession]);
 
   /* ---------- actions ---------- */
   const play = useCallback((note: VoiceNote, queue?: VoiceNote[], startAt?: number, label?: string) => {
