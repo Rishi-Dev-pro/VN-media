@@ -40,6 +40,8 @@ export interface LibraryRepository {
   removeSavedAlbum(albumId: string): Promise<void>;
   /** push a note to the top of recently-played */
   recordPlay(noteId: string): Promise<void>;
+  /** move a note to the top with a resume position (fraction 0..1) */
+  recordProgress(noteId: string, progress: number): Promise<void>;
   /** wipe recently-played history */
   clearRecentlyPlayed(): Promise<void>;
 }
@@ -152,6 +154,18 @@ export const mockLibraryRepository: LibraryRepository = {
     const i = recents.findIndex((r) => r.id === noteId);
     if (i >= 0) recents.splice(i, 1);
     recents.unshift({ id: noteId, playedAt: Date.now(), progress: 0 });
+    if (recents.length > 12) recents.length = 12;
+  },
+
+  async recordProgress(noteId, progress) {
+    await delay(100);
+    const i = recents.findIndex((r) => r.id === noteId);
+    if (i >= 0) recents.splice(i, 1);
+    recents.unshift({
+      id: noteId,
+      playedAt: Date.now(),
+      progress: Math.min(1, Math.max(0, progress)),
+    });
     if (recents.length > 12) recents.length = 12;
   },
 

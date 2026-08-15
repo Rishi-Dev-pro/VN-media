@@ -25,7 +25,9 @@ export default function AlbumDetailPage() {
   const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
 
   const playAll = useCallback(() => {
-    if (album && album.tracks.length > 0) play(album.tracks[0], album.tracks);
+    if (album && album.tracks.length > 0) {
+      play(album.tracks[0], album.tracks, undefined, album.title.toUpperCase());
+    }
   }, [album, play]);
 
   const toggleSaved = useCallback(() => setSaved((s) => !s), []);

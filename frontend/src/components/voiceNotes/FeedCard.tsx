@@ -161,7 +161,7 @@ export function FeedCard({ note, queue, index, onOpenComments, album, onPlay, on
                 <BookmarkX size={15} aria-hidden="true" />
               </button>
             )}
-            <MoreMenu itemLabel={note.title} align="right" />
+            <MoreMenu itemLabel={note.title} align="right" note={note} />
           </span>
         </span>
       </span>

@@ -30,10 +30,11 @@ export function ContinueCard({ entry, queue, onPlay }: ContinueCardProps) {
   const activate = useCallback(() => {
     if (isCurrent) toggle();
     else {
-      play(note, queue);
+      // resume from where the listener stopped
+      play(note, queue, entry.progress * note.duration);
       onPlay?.(note);
     }
-  }, [isCurrent, note, queue, play, toggle, onPlay]);
+  }, [isCurrent, note, queue, play, toggle, onPlay, entry.progress]);
 
   return (
     <article

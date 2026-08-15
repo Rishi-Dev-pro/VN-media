@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { View } from '../../types/navigation';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { usePlaybackHistory } from '../../hooks/usePlaybackHistory';
 import { DesktopSideNav } from './DesktopSideNav';
 import { MobileBottomNav } from './MobileBottomNav';
 import { AppHeader } from './AppHeader';
@@ -32,6 +34,11 @@ function Background() {
 
 export function AppShell({ view, onNavigate, children }: AppShellProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // global listening companion: every play flows into recently-played,
+  // and the transport answers to keyboard shortcuts (never while typing)
+  usePlaybackHistory();
+  useKeyboardShortcuts();
 
   return (
     <div className="shell">

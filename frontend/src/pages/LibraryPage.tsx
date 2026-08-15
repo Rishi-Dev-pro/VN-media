@@ -753,7 +753,7 @@ function RecentRow({ entry, queue, onPlay }: RecentRowProps) {
         />
 
         <span onClick={(e) => e.stopPropagation()} role="presentation">
-          <MoreMenu itemLabel={note.title} />
+          <MoreMenu itemLabel={note.title} note={note} />
         </span>
       </div>
     </li>

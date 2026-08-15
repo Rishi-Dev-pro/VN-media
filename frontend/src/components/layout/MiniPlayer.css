@@ -118,8 +118,43 @@
   }
 }
 
+.mini-player__time {
+  color: var(--text-4);
+}
+
+.mini-player__retry {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0e1014;
+  background: linear-gradient(160deg, var(--pink), #d9538a);
+  box-shadow: var(--shadow-accent);
+  transition: transform var(--dur-fast) ease;
+}
+
+.mini-player__retry:active {
+  transform: scale(0.92);
+}
+
+/* ---------- desktop: persistent bottom bar ---------- */
+
 @media (min-width: 1024px) {
   .mini-player {
-    display: none;
+    left: 50%;
+    right: auto;
+    bottom: 18px;
+    transform: translateX(-50%);
+    width: min(560px, calc(100vw - 32px));
+    border-radius: 18px;
+  }
+
+  .mini-player__main img {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
   }
 }

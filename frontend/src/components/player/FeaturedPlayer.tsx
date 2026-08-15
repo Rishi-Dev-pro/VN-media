@@ -1,4 +1,4 @@
-import { MessageCircle, Radio } from 'lucide-react';
+import { MessageCircle, Radio, RotateCw } from 'lucide-react';
 import type { VoiceNote } from '../../data/types';
 import { getCreator } from '../../data/mockCreators';
 import { useCommentCount } from '../../hooks/useCommentCount';
@@ -19,13 +19,33 @@ interface FeaturedPlayerProps {
 
 /** The premium "now playing" panel — the visual focal point. */
 export function FeaturedPlayer({ note, onOpenComments }: FeaturedPlayerProps) {
-  const { current, isPlaying } = usePlayer();
+  const { current, isPlaying, playbackError, retryPlayback } = usePlayer();
   const { liked, likeCount, busy: likeBusy, toggle: toggleLike } = useEngagement(note);
   const commentCount = useCommentCount(note.id, note.comments);
   const creator = getCreator(note.creatorId);
 
   const isCurrent = current?.id === note.id;
   const playing = isCurrent && isPlaying;
+
+  if (playbackError && isCurrent) {
+    return (
+      <section className="featured-player" aria-label="Playback error">
+        <div className="featured-player__error" role="status">
+          <span className="featured-player__error-title">PLAYBACK SIGNAL LOST.</span>
+          <span className="featured-player__error-body">The VoiceNote couldn’t start.</span>
+          <button
+            type="button"
+            className="featured-player__retry"
+            onClick={retryPlayback}
+            aria-label="Retry playback"
+          >
+            <RotateCw size={14} aria-hidden="true" />
+            RETRY
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="featured-player" aria-label="Now playing">

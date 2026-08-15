@@ -396,8 +396,8 @@ function FeaturedNote({
 
   const activate = useCallback(() => {
     if (isCurrent) toggle();
-    else play(note, queue);
-  }, [isCurrent, note, queue, play, toggle]);
+    else play(note, queue, undefined, creator.name.toUpperCase());
+  }, [isCurrent, note, queue, play, toggle, creator.name]);
 
   // a follow here lands in the same notification stream the
   // repository boundary already owns (single social graph)

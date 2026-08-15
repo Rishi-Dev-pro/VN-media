@@ -139,7 +139,7 @@ export function TrackRow({ note, queue, index, showComments, onOpenComments, onP
           </button>
         )}
         <span onClick={(e) => e.stopPropagation()} role="presentation">
-          <MoreMenu itemLabel={note.title} />
+          <MoreMenu itemLabel={note.title} note={note} />
         </span>
       </div>
     </li>
