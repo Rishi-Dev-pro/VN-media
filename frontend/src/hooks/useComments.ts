@@ -4,6 +4,7 @@ import type { AuthUser } from '../services/authRepository';
 import { createAuthRepository } from '../services/authRepository';
 import { createCommentRepository, type CommentRepository } from '../services/commentRepository';
 import { createNotificationRepository } from '../services/notificationRepository';
+import { isApiMode } from '../services/api/apiConfig';
 
 /* ============================================================
    Comments hook.
@@ -115,8 +116,11 @@ export function useComments(noteId: string | null) {
         });
         setComments((prev) => prev.map((c) => (c.id === temp.id ? saved : c)));
         // one social graph: a comment emits the matching incoming event.
-        // Public notes only — the repository enforces that boundary.
-        createNotificationRepository().deliverComment(noteRef.current, trimmed);
+        // Mock mode only — the repository enforces the public boundary;
+        // in API mode the backend generates VOICE_NOTE_COMMENTED itself.
+        if (!isApiMode) {
+          createNotificationRepository().deliverComment(noteRef.current, trimmed);
+        }
       } catch {
         // rollback — remove the optimistic comment
         setComments((prev) => prev.filter((c) => c.id !== temp.id));

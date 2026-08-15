@@ -18,7 +18,7 @@ const delay = (s: string) => ({ animationDelay: s });
 
 export default function AlbumDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { album, loading, error, retry } = useAlbum(id);
+  const { album, loading, error, notFound, retry } = useAlbum(id);
   const { play } = usePlayer();
   const { isFollowing, toggleFollow } = useFollows();
   const [saved, setSaved] = useState(false);
@@ -55,27 +55,27 @@ export default function AlbumDetailPage() {
     );
   }
 
-  if (error || !album) {
+  if (error || notFound || !album) {
     return (
       <div className="album-detail">
         <Link to="/albums" className="album-detail__back micro">
           <ArrowLeft size={14} aria-hidden="true" /> Albums
         </Link>
         <div className="albums-error" role="alert">
-          <h2>{error ? 'WE LOST THE SIGNAL.' : 'ALBUM NOT FOUND.'}</h2>
+          <h2>{notFound ? 'ALBUM NOT FOUND.' : 'WE LOST THE SIGNAL.'}</h2>
           <p>
-            {error
-              ? 'Something went wrong while loading this collection.'
-              : 'This collection may have been unpublished or never existed.'}
+            {notFound
+              ? 'This collection may have been unpublished or never existed.'
+              : 'Something went wrong while loading this collection.'}
           </p>
-          {error ? (
-            <button type="button" className="btn btn--ghost" onClick={retry}>
-              Try again
-            </button>
-          ) : (
+          {notFound ? (
             <Link to="/albums" className="btn btn--ghost">
               Browse albums
             </Link>
+          ) : (
+            <button type="button" className="btn btn--ghost" onClick={retry}>
+              Try again
+            </button>
           )}
         </div>
       </div>

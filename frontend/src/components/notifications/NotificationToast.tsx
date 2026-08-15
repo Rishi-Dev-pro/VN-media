@@ -1,8 +1,8 @@
 import { Heart, Mail, MessageCircle, UserPlus, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { getCreator } from '../../data/mockCreators';
 import type { AppNotification, NotificationType } from '../../data/notifications';
 import { Avatar } from '../common/Avatar';
+import { resolveCreatorSync } from '../../services/api/identity';
 import './NotificationToast.css';
 
 const EVENT_ICON: Record<NotificationType, LucideIcon> = {
@@ -19,7 +19,7 @@ interface NotificationToastProps {
 }
 
 export function NotificationToast({ notification, onDismiss, onOpen }: NotificationToastProps) {
-  const creator = getCreator(notification.actorId);
+  const creator = resolveCreatorSync(notification.actorId);
   const Icon = EVENT_ICON[notification.type];
 
   let line: string;

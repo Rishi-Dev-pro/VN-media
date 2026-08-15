@@ -1,6 +1,5 @@
 import { Pause, Play, Users } from 'lucide-react';
-import { getCreator } from '../../data/mockCreators';
-import { DEMO_LISTENER } from '../../data/mockFollowing';
+import { getCreatorSafe as getCreator, getListener } from '../../services/api/identity';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatTime } from '../../utils/format';
 import { Avatar } from '../common/Avatar';
@@ -16,6 +15,7 @@ interface CirclePanelProps {
 export function CirclePanel({ followingCount, newThisWeek, feedCount }: CirclePanelProps) {
   const { current, isPlaying, toggle } = usePlayer();
   const creator = current ? getCreator(current.creatorId) : null;
+  const listener = getListener();
 
   return (
     <aside className="circle-panel" aria-label="Your circle">
@@ -23,10 +23,10 @@ export function CirclePanel({ followingCount, newThisWeek, feedCount }: CirclePa
       <section className="circle-card">
         <h3 className="circle-card__title micro">Your circle</h3>
         <div className="circle-card__listener">
-          <Avatar src={DEMO_LISTENER.avatar} alt="You" size={34} ring />
+          <Avatar src={listener.avatar} alt="You" size={34} ring />
           <span>
             <span className="circle-card__who">Listening as</span>
-            <span className="circle-card__handle">@{DEMO_LISTENER.handle}</span>
+            <span className="circle-card__handle">@{listener.handle}</span>
           </span>
         </div>
         <div className="circle-card__stats">

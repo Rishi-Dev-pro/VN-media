@@ -1,11 +1,14 @@
 import { Heart, Mail, MessageCircle, UserPlus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { getCreator } from '../../data/mockCreators';
-import { voiceNotesById } from '../../data/mockVoiceNotes';
 import type { AppNotification, NotificationType } from '../../data/notifications';
-import { DEMO_NOW } from '../../data/mockFollowing';
 import { formatRelative } from '../../utils/format';
 import { Avatar } from '../common/Avatar';
+import {
+  artworkFor,
+  relativeNow,
+  resolveCreatorSync,
+  resolveNoteSync,
+} from '../../services/api/identity';
 import './NotificationCard.css';
 
 const EVENT_ICON: Record<NotificationType, LucideIcon> = {
@@ -22,10 +25,10 @@ interface NotificationCardProps {
 }
 
 export function NotificationCard({ notification, index, onOpen }: NotificationCardProps) {
-  const creator = getCreator(notification.actorId);
+  const creator = resolveCreatorSync(notification.actorId);
   const Icon = EVENT_ICON[notification.type];
   const unread = notification.readAt === null;
-  const note = notification.voiceNoteId ? voiceNotesById[notification.voiceNoteId] : undefined;
+  const note = notification.voiceNoteId ? resolveNoteSync(notification.voiceNoteId) : undefined;
 
   let line: string;
   let sub: string | undefined;
@@ -66,13 +69,13 @@ export function NotificationCard({ notification, index, onOpen }: NotificationCa
         <span className="notif-card__line">{line}</span>
         {sub && <span className="notif-card__sub">{sub}</span>}
         <span className="notif-card__time tabular">
-          {formatRelative(new Date(notification.createdAt).toISOString(), DEMO_NOW)}
+          {formatRelative(new Date(notification.createdAt).toISOString(), relativeNow())}
         </span>
       </span>
 
       {note && (
         <span className="notif-card__art" aria-hidden="true">
-          <img src={note.cover} alt="" loading="lazy" width={44} height={44} />
+          <img src={artworkFor(note.id)} alt="" loading="lazy" width={44} height={44} />
         </span>
       )}
 

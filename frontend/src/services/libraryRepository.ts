@@ -2,6 +2,8 @@ import type { VoiceNote } from '../data/types';
 import { voiceNotesById } from '../data/mockVoiceNotes';
 import { DEMO_NOW } from '../data/mockFollowing';
 import { createAlbumRepository, type AlbumSummary } from './albumRepository';
+import { isApiMode } from './api/apiConfig';
+import * as httpLibraryModule from './api/httpLibraryRepository';
 
 /* ============================================================
    Library repository boundary.
@@ -97,10 +99,12 @@ const initialRecents: RecentSeed[] = [
 /* ----- session persistence -----
  * Best-effort sessionStorage mirror of the demo listener's library so
  * saved items and Recently Played survive a hard refresh within the
- * same tab. Structural only — no backend, no secrets. */
-const LIBRARY_STORAGE_KEY = 'vn.library.session.v1';
+ * same tab. Structural only — no backend, no secrets. Shared by the
+ * mock and HTTP implementations (API mode resolves ids through the
+ * real backend, never the mock catalog). */
+export const LIBRARY_STORAGE_KEY = 'vn.library.session.v1';
 
-interface PersistedLibrary {
+export interface PersistedLibrary {
   savedNotes: SavedItem[];
   savedAlbums: SavedItem[];
   recents: RecentSeed[];
@@ -135,13 +139,37 @@ function loadPersistedLibrary(): PersistedLibrary | null {
   }
 }
 
-function persistLibrary(): void {
+/** ObjectIds are 24 hex chars — mock ids (e.g. `vn-neon-bloom`) never
+ *  match, so stale mock-mode sessions can't leak into the real API. */
+function apiSafeIds<T extends { id: string }>(items: T[]): T[] {
+  return items.filter((s) => /^[0-9a-f]{24}$/.test(s.id));
+}
+
+/** Local library state — persisted copy wins, else deterministic seeds
+ *  (empty in API mode: mock ids must never leak into real data).
+ *  In API mode the persisted copy is also sanitized to backend-shaped
+ *  ids so hybrid state can never reach the real backend. */
+export function getLocalLibraryState(): PersistedLibrary {
+  const persisted = loadPersistedLibrary();
+  if (persisted) {
+    return isApiMode
+      ? {
+          savedNotes: apiSafeIds(persisted.savedNotes),
+          savedAlbums: apiSafeIds(persisted.savedAlbums),
+          recents: apiSafeIds(persisted.recents) as RecentSeed[],
+        }
+      : persisted;
+  }
+  return isApiMode
+    ? { savedNotes: [], savedAlbums: [], recents: [] }
+    : { savedNotes: [...initialSavedNotes], savedAlbums: [...initialSavedAlbums], recents: [...initialRecents] };
+}
+
+/** Persist the whole local library state (callers own the arrays). */
+export function persistLocalLibraryState(state: PersistedLibrary): void {
   if (typeof window === 'undefined') return;
   try {
-    window.sessionStorage.setItem(
-      LIBRARY_STORAGE_KEY,
-      JSON.stringify({ savedNotes, savedAlbums, recents } satisfies PersistedLibrary),
-    );
+    window.sessionStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(state));
   } catch {
     // storage unavailable — persistence is best-effort
   }
@@ -149,16 +177,23 @@ function persistLibrary(): void {
 
 /* ----- session-local mutable state (hydrated from the session) ----- */
 
-const persistedLibrary = loadPersistedLibrary();
-const savedNotes: SavedItem[] = persistedLibrary
-  ? persistedLibrary.savedNotes
-  : [...initialSavedNotes];
-const savedAlbums: SavedItem[] = persistedLibrary
-  ? persistedLibrary.savedAlbums
-  : [...initialSavedAlbums];
-const recents: RecentSeed[] = persistedLibrary
-  ? persistedLibrary.recents
-  : [...initialRecents];
+const initialLibrary = getLocalLibraryState();
+let savedNotes: SavedItem[] = initialLibrary.savedNotes;
+let savedAlbums: SavedItem[] = initialLibrary.savedAlbums;
+let recents: RecentSeed[] = initialLibrary.recents;
+
+function persistLibrary(): void {
+  persistLocalLibraryState({ savedNotes, savedAlbums, recents });
+}
+
+/** Re-hydrate the in-memory mock library from the session — logout must not
+ *  leave the previous account's listening history in memory. */
+export function resetLocalLibraryState(): void {
+  const fresh = getLocalLibraryState();
+  savedNotes = fresh.savedNotes;
+  savedAlbums = fresh.savedAlbums;
+  recents = fresh.recents;
+}
 
 const albumRepo = createAlbumRepository();
 
@@ -240,7 +275,13 @@ export const mockLibraryRepository: LibraryRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createLibraryRepository(): LibraryRepository {
-  return mockLibraryRepository;
+  return isApiMode ? httpLibraryModule.httpLibraryRepository : mockLibraryRepository;
+}
+
+/** Drop per-user library memory on logout (mode-aware). */
+export function resetLibraryRepository(): void {
+  resetLocalLibraryState();
+  if (isApiMode) httpLibraryModule.resetHttpLibraryState();
 }

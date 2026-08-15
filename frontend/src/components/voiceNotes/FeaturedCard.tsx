@@ -1,7 +1,7 @@
 import { Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
 import type { VoiceNote } from '../../data/types';
-import { getCreator } from '../../data/mockCreators';
+import { getCreatorSafe as getCreator } from '../../services/api/identity';
 import { useEngagement } from '../../hooks/useEngagement';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatTime } from '../../utils/format';

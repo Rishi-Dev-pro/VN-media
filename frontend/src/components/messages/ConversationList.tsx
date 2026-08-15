@@ -1,7 +1,7 @@
 import { Mic, Search, Trash2, VolumeX, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCreator } from '../../data/mockCreators';
+import { getCreatorSafe as getCreator } from '../../services/api/identity';
 import type { ConversationSummary } from '../../services/messageRepository';
 import { formatRelative, formatTime } from '../../utils/format';
 import { Avatar } from '../common/Avatar';

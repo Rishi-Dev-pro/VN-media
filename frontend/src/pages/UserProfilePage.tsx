@@ -1,12 +1,15 @@
-import { Calendar, Check, Edit3, Headphones, PlusCircle, Share2, X } from 'lucide-react';
+import { Calendar, Check, Edit3, Headphones, LogOut, PlusCircle, Share2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from '../components/common/Avatar';
 import { SharePanel } from '../components/common/SharePanel';
-import { mockCreators } from '../data/mockCreators';
 import { useParallax } from '../hooks/useParallax';
 import { createAuthRepository, type AuthUser } from '../services/authRepository';
-import { createLibraryRepository } from '../services/libraryRepository';
+import { createLibraryRepository, resetLibraryRepository } from '../services/libraryRepository';
+import { isApiMode } from '../services/api/apiConfig';
+import { clearSession } from '../services/api/session';
+import { disconnectSocket } from '../services/api/realtime';
+import { resolveCreatorSync } from '../services/api/identity';
 import { useFollows } from '../state/FollowContext';
 import './UserProfilePage.css';
 
@@ -57,6 +60,26 @@ export default function UserProfilePage() {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 1900);
   }, []);
+
+  /** Sign out (API mode): drop the session + per-user client state. */
+  const signOut = useCallback(() => {
+    disconnectSocket();
+    clearSession();
+    resetLibraryRepository();
+    // per-user client state must not survive into the next session
+    for (const key of [
+      'vn.player.session.v1',
+      'vn.library.session.v1',
+      'vn.follows.session.v1',
+    ]) {
+      try {
+        window.sessionStorage.removeItem(key);
+      } catch {
+        /* best-effort */
+      }
+    }
+    navigate('/login', { replace: true });
+  }, [navigate]);
 
   useEffect(
     () => () => {
@@ -197,6 +220,16 @@ export default function UserProfilePage() {
                 <SharePanel url="/profile" username={handle} onClose={() => setShareOpen(false)} />
               )}
             </div>
+            {isApiMode && (
+              <button
+                type="button"
+                className="btn btn--ghost user-profile__signout"
+                onClick={signOut}
+                aria-label="Sign out"
+              >
+                <LogOut size={15} aria-hidden="true" /> Sign out
+              </button>
+            )}
           </div>
 
           <p className="user-profile__joined micro">
@@ -256,9 +289,7 @@ function YourVoices() {
   const { followingIds } = useFollows();
 
   const creators = useMemo(() => {
-    return Array.from(followingIds)
-      .map((id) => mockCreators.find((c) => c.id === id))
-      .filter((c): c is NonNullable<typeof c> => Boolean(c));
+    return Array.from(followingIds).map((id) => resolveCreatorSync(id));
   }, [followingIds]);
 
   if (creators.length === 0) return null;
@@ -267,7 +298,7 @@ function YourVoices() {
     <div className="user-profile__voices">
       {creators.map((c) => (
         <Link
-          key={c.id}
+          key={c.handle}
           to={`/creators/${c.handle}`}
           className="user-profile__voice"
           aria-label={`Open profile of ${c.name}`}

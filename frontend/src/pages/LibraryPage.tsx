@@ -24,8 +24,8 @@ import { LikeButton } from '../components/common/LikeButton';
 import { MoreMenu } from '../components/common/MoreMenu';
 import { ContinueCard } from '../components/library/ContinueCard';
 import { FeedCard } from '../components/voiceNotes/FeedCard';
-import { getCreator } from '../data/mockCreators';
-import { DEMO_LISTENER, DEMO_NOW } from '../data/mockFollowing';
+import { getCreatorSafe as getCreator, getListener } from '../services/api/identity';
+import { DEMO_NOW } from '../data/mockFollowing';
 import type { VoiceNote } from '../data/types';
 import {
   searchAlbums,
@@ -177,7 +177,7 @@ export default function LibraryPage() {
         </div>
         <span className="library-head__room">
           <span className="library-head__room-dot" aria-hidden="true" />
-          LISTENING ROOM · @{DEMO_LISTENER.handle}
+          LISTENING ROOM · @{getListener().handle}
         </span>
       </header>
 

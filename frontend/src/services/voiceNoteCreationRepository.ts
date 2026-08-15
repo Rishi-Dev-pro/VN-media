@@ -2,6 +2,8 @@ import type { Category, VoiceNote } from '../data/types';
 import { addVoiceNote, mockVoiceNotes } from '../data/mockVoiceNotes';
 import { SELF_CREATOR_ID } from '../data/mockCreators';
 import { seededWave } from '../utils/waveform';
+import { isApiMode } from './api/apiConfig';
+import { httpVoiceNoteCreationRepository } from './api/httpVoiceNoteCreationRepository';
 
 /* ============================================================
    VoiceNote creation repository boundary.
@@ -275,7 +277,7 @@ export const mockVoiceNoteCreationRepository: VoiceNoteCreationRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createVoiceNoteCreationRepository(): VoiceNoteCreationRepository {
-  return mockVoiceNoteCreationRepository;
+  return isApiMode ? httpVoiceNoteCreationRepository : mockVoiceNoteCreationRepository;
 }

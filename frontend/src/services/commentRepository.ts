@@ -1,6 +1,8 @@
 import type { MockComment } from '../data/mockComments';
 import { getMockComments } from '../data/mockComments';
 import { voiceNotesById } from '../data/mockVoiceNotes';
+import { isApiMode } from './api/apiConfig';
+import { httpCommentRepository } from './api/httpCommentRepository';
 
 /* ============================================================
    Comment repository boundary.
@@ -170,7 +172,7 @@ export const mockCommentRepository: CommentRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createCommentRepository(): CommentRepository {
-  return mockCommentRepository;
+  return isApiMode ? httpCommentRepository : mockCommentRepository;
 }

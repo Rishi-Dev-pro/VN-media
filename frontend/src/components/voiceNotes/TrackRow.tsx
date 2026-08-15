@@ -2,7 +2,7 @@ import { BookmarkX, MessageCircle } from 'lucide-react';
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import type { VoiceNote } from '../../data/types';
-import { getCreator } from '../../data/mockCreators';
+import { getCreatorSafe as getCreator } from '../../services/api/identity';
 import { useCommentCount } from '../../hooks/useCommentCount';
 import { useEngagement } from '../../hooks/useEngagement';
 import { usePlayer } from '../../state/PlayerContext';

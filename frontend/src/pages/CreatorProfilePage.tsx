@@ -12,7 +12,7 @@ import {
   Share2,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlbumCard } from '../components/albums/AlbumCard';
 import { CommentsDrawer } from '../components/comments/CommentsDrawer';
@@ -20,8 +20,9 @@ import { EmptyState } from '../components/common/EmptyState';
 import { SharePanel } from '../components/common/SharePanel';
 import { FeedCard } from '../components/voiceNotes/FeedCard';
 import type { Creator, VoiceNote } from '../data/types';
-import { notesByCreator, DEMO_NOW } from '../data/mockFollowing';
+import { DEMO_NOW } from '../data/mockFollowing';
 import { useCreator } from '../hooks/useCreators';
+import { createVoiceNoteRepository } from '../services/voiceNoteRepository';
 import { useParallax } from '../hooks/useParallax';
 import { createAlbumRepository, type AlbumSummary } from '../services/albumRepository';
 import { createMessageRepository } from '../services/messageRepository';
@@ -61,10 +62,26 @@ export default function CreatorProfilePage() {
   const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
   const parallaxRef = useParallax<HTMLDivElement>(14, 10);
 
-  const notes = useMemo(
-    () => (creator ? notesByCreator(creator.id) : []),
-    [creator],
-  );
+  // Public VoiceNotes for this creator — mock mode: catalog filter;
+  // API mode: the real backend (`/users/:username/voice-notes`). The
+  // repository boundary is the only place content comes from.
+  const [notes, setNotes] = useState<VoiceNote[]>([]);
+  useEffect(() => {
+    let active = true;
+    setNotes([]);
+    if (!creator) return;
+    void createVoiceNoteRepository()
+      .getByCreatorHandle(creator.handle)
+      .then((list) => {
+        if (active) setNotes(list);
+      })
+      .catch(() => {
+        if (active) setNotes([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [creator]);
 
   /* ----- message -> existing conversation (or a fresh thread) ----- */
   const openMessage = useCallback(async () => {

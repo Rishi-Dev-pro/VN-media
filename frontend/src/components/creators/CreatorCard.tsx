@@ -51,7 +51,7 @@ export function CreatorCard({ creator, index = 0, compact = false }: CreatorCard
           style={{ ['--tint' as string]: creator.tint }}
           aria-hidden="true"
         >
-          <img src={creator.avatar} alt="" width={52} height={52} />
+          <img src={creator.avatar || '/images/portrait-7.jpg'} alt="" width={52} height={52} />
         </span>
         {creator.featured && (
           <span className="creator-card__badge micro">Featured</span>

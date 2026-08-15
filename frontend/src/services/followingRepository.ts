@@ -2,6 +2,8 @@ import type { VoiceNote } from '../data/types';
 import { DEMO_LISTENER, DEMO_NOW, initialFollowing, notesByCreator } from '../data/mockFollowing';
 import { mockCreators } from '../data/mockCreators';
 import { mockVoiceNotes } from '../data/mockVoiceNotes';
+import { isApiMode } from './api/apiConfig';
+import { httpFollowingRepository } from './api/httpFollowingRepository';
 
 /* ============================================================
    Following repository boundary.
@@ -80,9 +82,9 @@ export const mockFollowingRepository: FollowingRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createFollowingRepository(): FollowingRepository {
-  return mockFollowingRepository;
+  return isApiMode ? httpFollowingRepository : mockFollowingRepository;
 }
 
 export { DEMO_LISTENER, DEMO_NOW, initialFollowing };

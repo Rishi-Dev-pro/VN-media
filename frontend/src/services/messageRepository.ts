@@ -7,6 +7,8 @@ import {
 } from '../data/messages';
 import { getCreator } from '../data/mockCreators';
 import { seededWave } from '../utils/waveform';
+import { isApiMode } from './api/apiConfig';
+import { httpMessageRepository } from './api/httpMessageRepository';
 
 /* ============================================================
    Message repository boundary.
@@ -234,7 +236,7 @@ export const mockMessageRepository: MessageRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createMessageRepository(): MessageRepository {
-  return mockMessageRepository;
+  return isApiMode ? httpMessageRepository : mockMessageRepository;
 }

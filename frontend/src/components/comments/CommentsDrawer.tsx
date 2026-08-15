@@ -8,7 +8,8 @@ import {
 } from 'react';
 import type { MockComment } from '../../data/mockComments';
 import type { VoiceNote } from '../../data/types';
-import { getCreator } from '../../data/mockCreators';
+import { getCreatorSafe as getCreator } from '../../services/api/identity';
+import { isApiMode } from '../../services/api/apiConfig';
 import { useComments } from '../../hooks/useComments';
 import { useCommentCount } from '../../hooks/useCommentCount';
 import { formatCount, formatRelative } from '../../utils/format';
@@ -489,7 +490,9 @@ export function CommentsDrawer({ note, onClose }: CommentsDrawerProps) {
             <ArrowUp size={16} aria-hidden="true" />
           </button>
         </form>
-        <p className="comments__note micro">Demo — comments live only in this session.</p>
+        {!isApiMode && (
+          <p className="comments__note micro">Demo — comments live only in this session.</p>
+        )}
       </section>
     </div>
   );

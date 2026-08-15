@@ -3,6 +3,8 @@ import { mockAlbums } from '../data/mockAlbums';
 import { mockCreators, creatorsById, SELF_CREATOR_ID } from '../data/mockCreators';
 import { notesByCreator } from '../data/mockFollowing';
 import { createAuthRepository } from './authRepository';
+import { isApiMode } from './api/apiConfig';
+import { httpCreatorRepository } from './api/httpCreatorRepository';
 
 /* ============================================================
    Repository boundary.
@@ -21,6 +23,8 @@ export interface CreatorProfile extends Creator {
   albumCount: number;
   /** aggregate plays across their public VoiceNotes (trending proxy) */
   totalPlays: number;
+  /** follow relationship for the requesting user (API mode) */
+  relationship?: { isFollowing: boolean };
 }
 
 export interface CreatorRepository {
@@ -104,9 +108,9 @@ export const mockCreatorRepository: CreatorRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createCreatorRepository(): CreatorRepository {
-  return mockCreatorRepository;
+  return isApiMode ? httpCreatorRepository : mockCreatorRepository;
 }
 
 /** Look up the base creator by id (fallback used by other surfaces). */

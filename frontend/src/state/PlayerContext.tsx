@@ -12,6 +12,9 @@ import type { VoiceNote } from '../data/types';
 import { voiceNotesById } from '../data/mockVoiceNotes';
 import { ambientAudio } from '../utils/ambientAudio';
 import { hashString, seededShuffle } from '../utils/seeded';
+import { isApiMode } from '../services/api/apiConfig';
+import { useSession } from './SessionContext';
+import { audioEngine } from '../services/api/audioEngine';
 
 export type RepeatMode = 'off' | 'all' | 'one';
 
@@ -118,8 +121,11 @@ function loadPersisted(): PersistedPlayer | null {
   }
 }
 
-/** Resolve a saved session into real VoiceNotes; fall back to defaults. */
+/** Resolve a saved session into real VoiceNotes; fall back to defaults.
+ *  API mode never hydrates from the local session — resolved ids could
+ *  reference mock catalog entries, and the backend is the only source. */
 function hydrateInitialState(): PlayerState {
+  if (isApiMode) return initialState;
   const saved = loadPersisted();
   if (!saved) return initialState;
   const queue = saved.queueIds
@@ -187,16 +193,64 @@ function withShuffle(
   };
 }
 
+/** True when the current note has a real backend media source. */
+function isRealMedia(s: PlayerState): boolean {
+  return isApiMode && Boolean(s.current?.audioUrl);
+}
+
+/** End-of-track resolution: repeat / shuffle / queue / stop. Shared by the
+ *  simulated clock and the real-audio `ended` handler. */
+function advanceOnEnd(s: PlayerState): Partial<PlayerState> {
+  if (!s.current) return { isPlaying: false };
+  if (s.repeat === 'one') return { elapsed: 0 };
+  if (s.queue.length > 0) {
+    const count = s.queue.length;
+    if (s.shuffle && s.shuffleOrder && s.shuffleOrder.length === count) {
+      const pos = s.shuffleOrder.indexOf(s.queueIndex);
+      const isLast = pos === count - 1;
+      const idx = s.shuffleOrder[(pos + 1) % count];
+      return {
+        current: s.queue[idx],
+        queueIndex: idx,
+        elapsed: 0,
+        isPlaying: !(s.repeat === 'off' && isLast),
+      };
+    }
+    const idx = (s.queueIndex + 1) % count;
+    const isLast = s.repeat === 'off' && idx === 0 && s.queueIndex === count - 1;
+    return {
+      current: s.queue[idx],
+      queueIndex: idx,
+      elapsed: 0,
+      isPlaying: !isLast,
+    };
+  }
+  return { elapsed: s.current.duration, isPlaying: false };
+}
+
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PlayerState>(hydrateInitialState);
+  const sessionStatus = useSession();
+
+  // Session cleared (logout / expired): drop the previous account's in-memory
+  // playback state so it can never re-record or re-surface for the next user.
+  const lastSession = useRef<ReturnType<typeof useSession>>(sessionStatus);
+  useEffect(() => {
+    const prev = lastSession.current;
+    lastSession.current = sessionStatus;
+    if (prev === 'authenticated' && sessionStatus !== 'authenticated') {
+      setState((cur) => (cur.current || cur.queue.length > 0 ? { ...initialState, likedIds: cur.likedIds } : cur));
+    }
+  }, [sessionStatus]);
 
   // Keep a live mirror for the rAF loop without stale closures.
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  /* ---------- ambient audio sync ---------- */
+  /* ---------- ambient audio sync (mock hum only — real media plays itself) ---------- */
   useEffect(() => {
-    if (state.isPlaying && !state.playbackError) ambientAudio.play(state.volume);
+    const real = isRealMedia(state);
+    if (state.isPlaying && !state.playbackError && !real) ambientAudio.play(state.volume);
     else ambientAudio.pause();
   }, [state.isPlaying, state.current, state.volume, state.playbackError]);
 
@@ -204,50 +258,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ambientAudio.setVolume(state.volume);
   }, [state.volume]);
 
-  /* ---------- playback clock ---------- */
+  /* ---------- simulated playback clock (real media drives itself) ---------- */
   useEffect(() => {
     if (!state.isPlaying || !state.current || state.playbackError) return;
+    if (isRealMedia(state)) return;
     let raf = 0;
     let last = performance.now();
 
     const tick = (now: number) => {
       const s = stateRef.current;
-      if (!s.isPlaying || !s.current || s.playbackError) return;
+      if (!s.isPlaying || !s.current || s.playbackError || isRealMedia(s)) return;
       const dt = Math.min((now - last) / 1000, 0.25);
       last = now;
 
-      let nextElapsed = s.elapsed + dt * s.speed;
-      let nextState: Partial<PlayerState> = { elapsed: nextElapsed };
-
-      if (nextElapsed >= s.current.duration) {
-        if (s.repeat === 'one') {
-          nextState = { elapsed: 0 };
-        } else if (s.queue.length > 0) {
-          const count = s.queue.length;
-          if (s.shuffle && s.shuffleOrder && s.shuffleOrder.length === count) {
-            const pos = s.shuffleOrder.indexOf(s.queueIndex);
-            const isLast = pos === count - 1;
-            const idx = s.shuffleOrder[(pos + 1) % count];
-            nextState = {
-              current: s.queue[idx],
-              queueIndex: idx,
-              elapsed: 0,
-              isPlaying: s.repeat === 'off' && isLast ? false : true,
-            };
-          } else {
-            const idx = (s.queueIndex + 1) % count;
-            const isLast = s.repeat === 'off' && idx === 0 && s.queueIndex === count - 1;
-            nextState = {
-              current: s.queue[idx],
-              queueIndex: idx,
-              elapsed: 0,
-              isPlaying: isLast ? false : true,
-            };
-          }
-        } else {
-          nextState = { elapsed: s.current.duration, isPlaying: false };
-        }
-      }
+      const nextElapsed = s.elapsed + dt * s.speed;
+      const nextState: Partial<PlayerState> =
+        nextElapsed >= s.current.duration ? advanceOnEnd(s) : { elapsed: nextElapsed };
 
       setState((prev) => ({ ...prev, ...nextState }));
       raf = requestAnimationFrame(tick);
@@ -257,6 +283,75 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.isPlaying, state.current?.id, state.playbackError]);
+
+  /* ---------- real media (Phase 18): load + drive the shared <audio> ---------- */
+  useEffect(() => {
+    const s = stateRef.current;
+    if (!isRealMedia(s) || !s.current) return;
+    const note = s.current;
+    const startAt = s.elapsed > 0 ? s.elapsed : 0;
+    let disposed = false;
+
+    void audioEngine
+      .load(note.audioUrl!, note.visibility === 'private', {
+        onTimeUpdate: (time) => {
+          if (disposed) return;
+          const cur = stateRef.current;
+          if (!cur.current || cur.current.id !== note.id) return;
+          // clamp to the note's known duration so the UI never runs away
+          setState((prev) => ({ ...prev, elapsed: Math.min(time, prev.current?.duration ?? time) }));
+        },
+        onEnded: () => {
+          if (disposed) return;
+          setState((prev) => ({ ...prev, ...advanceOnEnd(prev) }));
+        },
+        onError: () => {
+          if (disposed) return;
+          setState((prev) =>
+            prev.current?.id === note.id
+              ? { ...prev, isPlaying: false, playbackError: true }
+              : prev,
+          );
+        },
+      }, startAt)
+      .then(() => {
+        if (disposed) return;
+        audioEngine.setVolume(stateRef.current.volume);
+        audioEngine.setRate(stateRef.current.speed);
+        if (stateRef.current.isPlaying) audioEngine.play();
+      })
+      .catch(() => {
+        if (disposed) return;
+        setState((prev) =>
+          prev.current?.id === note.id ? { ...prev, playbackError: true, isPlaying: false } : prev,
+        );
+      });
+
+    return () => {
+      disposed = true;
+      audioEngine.release();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.current?.id]);
+
+  // play / pause the real element
+  useEffect(() => {
+    if (!isRealMedia(state)) return;
+    if (state.isPlaying && !state.playbackError) audioEngine.play();
+    else audioEngine.pause();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.isPlaying, state.playbackError, state.current?.id]);
+
+  // volume + rate flow straight through to the element
+  useEffect(() => {
+    if (!isRealMedia(state)) return;
+    audioEngine.setVolume(state.volume);
+  }, [state.volume, state.current?.id]);
+
+  useEffect(() => {
+    if (!isRealMedia(state)) return;
+    audioEngine.setRate(state.speed);
+  }, [state.speed, state.current?.id]);
 
   /* ---------- persistence ---------- */
   const saveSession = useCallback(() => {
@@ -385,6 +480,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setState((prev) => {
       if (!prev.current) return prev;
       const clamped = Math.min(Math.max(0, seconds), prev.current.duration);
+      if (isRealMedia(prev)) audioEngine.seekTo(clamped);
       return { ...prev, elapsed: clamped };
     });
   }, []);

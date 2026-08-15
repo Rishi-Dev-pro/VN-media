@@ -63,7 +63,7 @@ function RecommendationCell({
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <span className="you-may-like__avatar">
-        <img src={creator.avatar} alt="" loading="lazy" width={56} height={56} />
+        <img src={creator.avatar || '/images/portrait-7.jpg'} alt="" loading="lazy" width={56} height={56} />
       </span>
       <span className="you-may-like__meta">
         <span className="you-may-like__name">{creator.name}</span>

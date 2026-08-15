@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { VoiceNote } from '../data/types';
 import { createNotificationRepository } from '../services/notificationRepository';
 import { createVoiceNoteRepository } from '../services/voiceNoteRepository';
+import { isApiMode } from '../services/api/apiConfig';
 import { usePlayer } from '../state/PlayerContext';
 
 /* ============================================================
@@ -51,8 +52,10 @@ export function useEngagement(note: VoiceNote | null) {
       } else {
         await voiceNoteRepo.likeVoiceNote(note.id);
         // one social graph: a like emits the matching incoming event.
-        // Only fires on the unliked→liked transition (no duplicates).
-        if ((note.visibility ?? 'public') === 'public') {
+        // Only fires on the unliked→liked transition (no duplicates) —
+        // and only in mock mode: in API mode the backend generates the
+        // VOICE_NOTE_LIKED notification itself via activity events.
+        if (!isApiMode && (note.visibility ?? 'public') === 'public') {
           notificationRepo.deliverLike(note.id);
         }
       }

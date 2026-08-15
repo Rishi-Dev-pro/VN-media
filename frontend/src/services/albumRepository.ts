@@ -3,6 +3,8 @@ import { mockAlbums, albumsById } from '../data/mockAlbums';
 import { mockCreators } from '../data/mockCreators';
 import { DEMO_LISTENER } from '../data/mockFollowing';
 import { voiceNotesById } from '../data/mockVoiceNotes';
+import { isApiMode } from './api/apiConfig';
+import { httpAlbumRepository } from './api/httpAlbumRepository';
 
 /* ============================================================
    Repository boundary.
@@ -147,7 +149,7 @@ export const mockAlbumRepository: AlbumRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createAlbumRepository(): AlbumRepository {
-  return mockAlbumRepository;
+  return isApiMode ? httpAlbumRepository : mockAlbumRepository;
 }

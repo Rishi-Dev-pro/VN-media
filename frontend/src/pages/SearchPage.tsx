@@ -13,7 +13,12 @@ import { FeedCard } from '../components/voiceNotes/FeedCard';
 import type { VoiceNote } from '../data/types';
 import { mockCreators } from '../data/mockCreators';
 import { mockTagCatalog } from '../data/mockTags';
+import type { Tag } from '../data/types';
+import type { CreatorProfile } from '../services/creatorRepository';
 import { useSearch } from '../hooks/useSearch';
+import { isApiMode } from '../services/api/apiConfig';
+import { createCreatorRepository } from '../services/creatorRepository';
+import { createVoiceNoteRepository } from '../services/voiceNoteRepository';
 import type { SearchFilter } from '../services/searchRepository';
 import { formatCount } from '../utils/format';
 import './SearchPage.css';
@@ -26,14 +31,49 @@ const TABS: { id: SearchFilter; label: string }[] = [
   { id: 'tags', label: 'Tags' },
 ];
 
-/** deterministic "trending" list for the discovery state */
-const TRENDING = [...mockTagCatalog].sort((a, b) => b.count - a.count).slice(0, 6);
-const SUGGESTED_CREATORS = [...mockCreators].sort((a, b) => b.followers - a.followers).slice(0, 4);
+/** deterministic "trending" list for the discovery state (mock mode) */
+const MOCK_TRENDING: Tag[] = [...mockTagCatalog].sort((a, b) => b.count - a.count).slice(0, 6);
+const MOCK_SUGGESTED: CreatorProfile[] = [...mockCreators]
+  .sort((a, b) => b.followers - a.followers)
+  .slice(0, 4) as CreatorProfile[];
 
 export default function SearchPage() {
   const search = useSearch();
   const inputRef = useRef<HTMLInputElement>(null);
   const [commentsNote, setCommentsNote] = useState<VoiceNote | null>(null);
+
+  // Real discovery state in API mode: suggested creators come from the real
+  // creator repository and trending tags are aggregated from the real catalog
+  // — mock identities/counts never appear in API mode.
+  const [discovery, setDiscovery] = useState<{ trending: Tag[]; suggested: CreatorProfile[] }>(
+    isApiMode
+      ? { trending: [], suggested: [] }
+      : { trending: MOCK_TRENDING, suggested: MOCK_SUGGESTED },
+  );
+  useEffect(() => {
+    if (!isApiMode) return;
+    let active = true;
+    Promise.all([
+      createVoiceNoteRepository().getTrending(),
+      createCreatorRepository().getCreators(),
+    ]).then(([notes, creators]) => {
+      if (!active) return;
+      const counts = new Map<string, number>();
+      for (const n of notes) {
+        for (const t of n.tags ?? []) {
+          counts.set(t, (counts.get(t) ?? 0) + 1);
+        }
+      }
+      const trending: Tag[] = [...counts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 6)
+        .map(([name, count]) => ({ name, count }));
+      setDiscovery({ trending, suggested: creators.slice(0, 4) });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const { query, setQuery, filter, setFilter, status, results, suggestions } = search;
 
@@ -135,7 +175,9 @@ export default function SearchPage() {
       </p>
 
       {/* ---- discovery state ---- */}
-      {!active && !loading && !failed && <DiscoveryState search={search} />}
+      {!active && !loading && !failed && (
+        <DiscoveryState search={search} trending={discovery.trending} suggested={discovery.suggested} />
+      )}
 
       {/* ---- error ---- */}
       {failed && (
@@ -157,7 +199,7 @@ export default function SearchPage() {
           {showSkeletons ? (
             <ResultsSkeleton />
           ) : filter === 'all' ? (
-            <AllResults search={search} onOpenComments={setCommentsNote} />
+            <AllResults search={search} onOpenComments={setCommentsNote} trending={discovery.trending} />
           ) : filter === 'voiceNotes' ? (
             <section aria-label="VoiceNote results">
               {results.voiceNotes.length > 0 ? (
@@ -173,7 +215,7 @@ export default function SearchPage() {
                   ))}
                 </div>
               ) : (
-                <NoResults query={query} />
+                <NoResults query={query} trending={discovery.trending} />
               )}
             </section>
           ) : filter === 'creators' ? (
@@ -181,7 +223,7 @@ export default function SearchPage() {
               {results.creators.length > 0 ? (
                 results.creators.map((c) => <CreatorResult key={c.id} creator={c} query={query} />)
               ) : (
-                <NoResults query={query} />
+                <NoResults query={query} trending={discovery.trending} />
               )}
             </section>
           ) : filter === 'albums' ? (
@@ -193,7 +235,7 @@ export default function SearchPage() {
                   ))}
                 </div>
               ) : (
-                <NoResults query={query} />
+                <NoResults query={query} trending={discovery.trending} />
               )}
             </section>
           ) : (
@@ -205,7 +247,7 @@ export default function SearchPage() {
                   ))}
                 </div>
               ) : (
-                <NoResults query={query} />
+                <NoResults query={query} trending={discovery.trending} />
               )}
             </section>
           )}
@@ -219,14 +261,22 @@ export default function SearchPage() {
    DISCOVERY STATE
    ============================================================ */
 
-function DiscoveryState({ search }: { search: ReturnType<typeof useSearch> }) {
+function DiscoveryState({
+  search,
+  trending,
+  suggested,
+}: {
+  search: ReturnType<typeof useSearch>;
+  trending: Tag[];
+  suggested: CreatorProfile[];
+}) {
   return (
     <div className="search-discovery">
       <section className="search-disc-left" aria-label="Trending and recent">
         <div className="search-panel">
           <h2 className="search-panel__title micro">Trending now</h2>
           <ol className="trending-list">
-            {TRENDING.map((tag, i) => (
+            {trending.map((tag, i) => (
               <li key={tag.name}>
                 <button
                   type="button"
@@ -280,7 +330,7 @@ function DiscoveryState({ search }: { search: ReturnType<typeof useSearch> }) {
         <div className="search-panel">
           <h2 className="search-panel__title micro">Suggested creators</h2>
           <div className="search-suggest-creators">
-            {SUGGESTED_CREATORS.map((c) => (
+            {suggested.map((c) => (
               <button
                 key={c.id}
                 type="button"
@@ -310,12 +360,14 @@ function DiscoveryState({ search }: { search: ReturnType<typeof useSearch> }) {
 function AllResults({
   search,
   onOpenComments,
+  trending,
 }: {
   search: ReturnType<typeof useSearch>;
   onOpenComments: (note: VoiceNote) => void;
+  trending: Tag[];
 }) {
   const { results, query } = search;
-  if (results.total === 0) return <NoResults query={query} />;
+  if (results.total === 0) return <NoResults query={query} trending={trending} />;
 
   return (
     <div className="search-all">
@@ -376,7 +428,7 @@ function AllResults({
    NO RESULTS / SKELETON
    ============================================================ */
 
-function NoResults({ query }: { query: string }) {
+function NoResults({ query, trending }: { query: string; trending: Tag[] }) {
   return (
     <EmptyState
       icon={<Compass />}
@@ -385,7 +437,7 @@ function NoResults({ query }: { query: string }) {
       action={
         <>
           <div className="no-results__tags">
-            {TRENDING.slice(0, 3).map((t) => (
+            {trending.slice(0, 3).map((t) => (
               <TagPill key={t.name} name={t.name} count={t.count} />
             ))}
           </div>

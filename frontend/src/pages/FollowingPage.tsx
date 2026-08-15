@@ -19,7 +19,7 @@ import { FeaturedCard } from '../components/voiceNotes/FeaturedCard';
 import { FeedCard } from '../components/voiceNotes/FeedCard';
 import { mockAlbums } from '../data/mockAlbums';
 import type { VoiceNote } from '../data/types';
-import { DEMO_LISTENER } from '../data/mockFollowing';
+import { getListener } from '../services/api/identity';
 import { useFollowing, type FeedFilter, type FeedSort } from '../hooks/useFollowing';
 import { formatCount } from '../utils/format';
 import './FollowingPage.css';
@@ -103,7 +103,7 @@ export default function FollowingPage() {
         <div className="following-head__listener" aria-label="Demo listener">
           <span className="following-head__listener-dot" aria-hidden="true" />
           <span>
-            Listening as <strong>@{DEMO_LISTENER.handle}</strong>
+            Listening as <strong>@{getListener().handle}</strong>
           </span>
         </div>
       </header>

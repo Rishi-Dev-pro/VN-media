@@ -52,6 +52,8 @@ export interface VoiceNote {
   featured?: boolean;
   /** Public by default; private notes never surface in public discovery */
   visibility?: 'public' | 'private';
+  /** Backend stream URL (Phase 18, API mode) — real media source */
+  audioUrl?: string;
 }
 
 export interface Album {

@@ -1,5 +1,5 @@
 import { Pause, Play, RotateCw, ChevronUp } from 'lucide-react';
-import { getCreator } from '../../data/mockCreators';
+import { getCreatorSafe as getCreator } from '../../services/api/identity';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatTime } from '../../utils/format';
 import { Equalizer } from '../common/Equalizer';

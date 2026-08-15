@@ -1,7 +1,7 @@
 import { Pause, Play } from 'lucide-react';
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getCreator } from '../../data/mockCreators';
+import { getCreatorSafe as getCreator } from '../../services/api/identity';
 import type { VoiceNote } from '../../data/types';
 import type { RecentEntry } from '../../services/libraryRepository';
 import { usePlayer } from '../../state/PlayerContext';

@@ -4,13 +4,16 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { NotificationCard } from '../components/notifications/NotificationCard';
 import { NotificationPreferences } from '../components/notifications/NotificationPreferences';
 import { EmptyState } from '../components/common/EmptyState';
-import { getCreator } from '../data/mockCreators';
-import { voiceNotesById } from '../data/mockVoiceNotes';
 import type { AppNotification } from '../data/notifications';
-import { DEMO_NOW } from '../data/mockFollowing';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePlayer } from '../state/PlayerContext';
 import { formatReleaseDate } from '../utils/format';
+import { createVoiceNoteRepository } from '../services/voiceNoteRepository';
+import {
+  relativeNow,
+  resolveCreatorSync,
+  resolveNoteSync,
+} from '../services/api/identity';
 import './NotificationsPage.css';
 
 type Filter = 'all' | 'unread';
@@ -18,9 +21,10 @@ type Filter = 'all' | 'unread';
 const INITIAL_VISIBLE = 12;
 
 function dayLabel(ts: number): string {
+  const now = relativeNow();
   const d = new Date(ts);
-  const today = new Date(DEMO_NOW);
-  const y = new Date(DEMO_NOW - 86400000);
+  const today = new Date(now);
+  const y = new Date(now - 86400000);
   const same = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   if (same(d, today)) return 'TODAY';
@@ -93,7 +97,7 @@ export default function NotificationsPage() {
     (n: AppNotification) => {
       markRead(n.id);
       if (n.type === 'USER_FOLLOWED') {
-        const creator = getCreator(n.actorId);
+        const creator = resolveCreatorSync(n.actorId);
         navigate(`/creators/${creator.handle}`);
         return;
       }
@@ -103,8 +107,17 @@ export default function NotificationsPage() {
       }
       // like / comment → play through the global player, land on Discover
       if (n.voiceNoteId) {
-        const note = voiceNotesById[n.voiceNoteId];
-        if (note) play(note, [note]);
+        const cached = resolveNoteSync(n.voiceNoteId);
+        if (cached) {
+          play(cached, [cached]);
+        } else {
+          void createVoiceNoteRepository()
+            .getById(n.voiceNoteId)
+            .then((note) => {
+              if (note) play(note, [note]);
+            })
+            .catch(() => undefined);
+        }
       }
       navigate('/discover');
     },

@@ -68,7 +68,10 @@ export function useAlbums(): AlbumListState {
 interface AlbumDetailState {
   album: AlbumDetail | null;
   loading: boolean;
+  /** network/authorization failure — retryable */
   error: boolean;
+  /** the album genuinely does not exist (404) — distinct from `error` */
+  notFound: boolean;
   retry: () => void;
 }
 
@@ -77,16 +80,18 @@ export function useAlbum(id: string | undefined): AlbumDetailState {
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError(false);
+    setNotFound(false);
     try {
       if (demoError()) throw new Error('demo error');
       const found = await repo.getById(id);
       setAlbum(found);
-      if (!found) setError(true);
+      if (!found) setNotFound(true);
     } catch {
       setError(true);
     } finally {
@@ -103,5 +108,5 @@ export function useAlbum(id: string | undefined): AlbumDetailState {
     void load();
   }, [load]);
 
-  return { album, loading, error, retry };
+  return { album, loading, error, notFound, retry };
 }

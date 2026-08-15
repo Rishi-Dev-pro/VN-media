@@ -7,6 +7,8 @@ import {
   recentlyPlayedIds,
   voiceNotesById,
 } from '../data/mockVoiceNotes';
+import { isApiMode } from './api/apiConfig';
+import { httpVoiceNoteRepository } from './api/httpVoiceNoteRepository';
 
 /* ============================================================
    Repository boundary.
@@ -26,6 +28,9 @@ export interface VoiceNoteRepository {
   getRelated(note: VoiceNote, limit?: number): Promise<VoiceNote[]>;
   getCreators(): Promise<Creator[]>;
   getAlbums(): Promise<Album[]>;
+  /** Public VoiceNotes from one creator (profile tab) — mock mode:
+   *  exact catalog filter; API mode: GET /users/:username/voice-notes. */
+  getByCreatorHandle(handle: string): Promise<VoiceNote[]>;
   /** persist a like (mock — fails deterministically with ?demo=like-error) */
   likeVoiceNote(noteId: string): Promise<void>;
   /** persist an unlike */
@@ -96,6 +101,13 @@ export const mockVoiceNoteRepository: VoiceNoteRepository = {
     return mockCreators;
   },
 
+  async getByCreatorHandle(handle) {
+    await delay(420);
+    const creator = mockCreators.find((c) => c.handle === handle);
+    if (!creator) return [];
+    return mockVoiceNotes.filter((n) => n.creatorId === creator.id && isPublic(n));
+  },
+
   async getAlbums() {
     await delay();
     return mockAlbums;
@@ -112,7 +124,7 @@ export const mockVoiceNoteRepository: VoiceNoteRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createVoiceNoteRepository(): VoiceNoteRepository {
-  return mockVoiceNoteRepository;
+  return isApiMode ? httpVoiceNoteRepository : mockVoiceNoteRepository;
 }

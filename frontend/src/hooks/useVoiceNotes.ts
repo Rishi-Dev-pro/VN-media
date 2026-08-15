@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { VoiceNote } from '../data/types';
 import { createVoiceNoteRepository } from '../services/voiceNoteRepository';
 
@@ -9,6 +9,8 @@ export interface DiscoverData {
   trending: VoiceNote[];
   recentlyPlayed: VoiceNote[];
   loading: boolean;
+  error: boolean;
+  retry: () => void;
 }
 
 /** Loads the data behind the Discover page through the repository. */
@@ -18,24 +20,41 @@ export function useVoiceNotes(): DiscoverData {
     trending: [],
     recentlyPlayed: [],
     loading: true,
+    error: false,
+    retry: () => undefined,
   });
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setData({
+      featured: [],
+      trending: [],
+      recentlyPlayed: [],
+      loading: true,
+      error: false,
+      retry: () => undefined,
+    });
 
     Promise.all([
       repo.getFeatured(),
       repo.getTrending(),
       repo.getRecentlyPlayed(),
-    ]).then(([featured, trending, recentlyPlayed]) => {
-      if (!active) return;
-      setData({ featured, trending, recentlyPlayed, loading: false });
-    });
+    ])
+      .then(([featured, trending, recentlyPlayed]) => {
+        if (!active) return;
+        setData({ featured, trending, recentlyPlayed, loading: false, error: false, retry: () => undefined });
+      })
+      .catch(() => {
+        if (!active) return;
+        setData((prev) => ({ ...prev, loading: false, error: true }));
+      });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [tick]);
 
-  return data;
+  const retry = useCallback(() => setTick((t) => t + 1), []);
+  return { ...data, retry };
 }

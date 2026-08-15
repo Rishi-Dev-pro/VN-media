@@ -1,6 +1,6 @@
 import { Hash, Mic2, Music2 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { getCreator } from '../../data/mockCreators';
+import { getCreatorSafe as getCreator } from '../../services/api/identity';
 import type { SearchResults } from '../../services/searchRepository';
 import { highlight } from './HighlightText';
 import './SearchSuggestions.css';

@@ -7,6 +7,8 @@ import {
 } from '../data/notifications';
 import { DEMO_NOW } from '../data/mockFollowing';
 import { voiceNotesById } from '../data/mockVoiceNotes';
+import { isApiMode } from './api/apiConfig';
+import { httpNotificationRepository } from './api/httpNotificationRepository';
 
 /* ============================================================
    Notification repository boundary.
@@ -153,7 +155,7 @@ export const mockNotificationRepository: NotificationRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createNotificationRepository(): NotificationRepository {
-  return mockNotificationRepository;
+  return isApiMode ? httpNotificationRepository : mockNotificationRepository;
 }

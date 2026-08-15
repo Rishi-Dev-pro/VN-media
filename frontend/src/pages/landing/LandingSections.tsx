@@ -6,6 +6,7 @@ import { Equalizer } from '../../components/common/Equalizer';
 import { PlayerControls } from '../../components/player/PlayerControls';
 import { getCreator } from '../../data/mockCreators';
 import { voiceNotesById } from '../../data/mockVoiceNotes';
+import { isApiMode } from '../../services/api/apiConfig';
 import { useVoiceNotes } from '../../hooks/useVoiceNotes';
 import { usePlayer } from '../../state/PlayerContext';
 import { formatTime } from '../../utils/format';
@@ -165,7 +166,10 @@ function Listening() {
   const creator = getCreator(SHOWCASE_NOTE.creatorId);
   const playing = current?.id === SHOWCASE_NOTE.id;
 
+  // Static showcase only — never inject the mock note into the global
+  // player in API mode (that would leak a mock note into real state).
   useEffect(() => {
+    if (isApiMode) return;
     if (!current) select(SHOWCASE_NOTE, [SHOWCASE_NOTE]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

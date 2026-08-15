@@ -1,7 +1,7 @@
 import { Disc3, Play } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Album } from '../../data/types';
-import { getCreator } from '../../data/mockCreators';
+import { getCreatorSafe as getCreator } from '../../services/api/identity';
 import { voiceNotesById } from '../../data/mockVoiceNotes';
 import { usePlayer } from '../../state/PlayerContext';
 import { highlight } from './HighlightText';

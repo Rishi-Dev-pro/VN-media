@@ -1,4 +1,6 @@
 import { mockCreators } from '../data/mockCreators';
+import { isApiMode } from './api/apiConfig';
+import { httpAuthRepository } from './api/httpAuthRepository';
 
 /* ============================================================
    Auth repository boundary.
@@ -142,5 +144,6 @@ export const mockAuthRepository: AuthRepository = {
 };
 
 export function createAuthRepository(): AuthRepository {
+  if (isApiMode) return httpAuthRepository;
   return mockAuthRepository;
 }

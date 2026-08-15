@@ -3,6 +3,8 @@ import { mockAlbums } from '../data/mockAlbums';
 import { mockCreators } from '../data/mockCreators';
 import { mockTagCatalog } from '../data/mockTags';
 import { mockVoiceNotes } from '../data/mockVoiceNotes';
+import { isApiMode } from './api/apiConfig';
+import { httpSearchRepository } from './api/httpSearchRepository';
 
 /* ============================================================
    Search repository boundary.
@@ -167,7 +169,7 @@ export const mockSearchRepository: SearchRepository = {
   },
 };
 
-/** Single access point — the integration phase swaps the impl here. */
+/** Single access point — mode switch lives here. */
 export function createSearchRepository(): SearchRepository {
-  return mockSearchRepository;
+  return isApiMode ? httpSearchRepository : mockSearchRepository;
 }

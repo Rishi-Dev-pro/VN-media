@@ -64,7 +64,7 @@ function CreatorCell({
           className={`creator-cell__avatar ${followed ? 'is-followed' : ''} ${live ? 'is-live' : ''}`}
           style={{ ['--tint' as string]: creator.tint }}
         >
-          <img src={creator.avatar} alt="" loading="lazy" width={52} height={52} />
+          <img src={creator.avatar || '/images/portrait-7.jpg'} alt="" loading="lazy" width={52} height={52} />
           <span className="creator-cell__live" aria-hidden="true">
             <i />
             <i />
