@@ -61,7 +61,7 @@ export function AppHeader({ view, onNavigate }: AppHeaderProps) {
           type="button"
           className={`app-header__me ${view === 'profile' ? 'is-active' : ''}`}
           onClick={() => onNavigate('profile')}
-          aria-label="Your profile (1 notification)"
+          aria-label="Your profile"
         >
           <Avatar src="/images/portrait-7.jpg" alt="You" size={34} />
           <span className="dot dot--pink" aria-hidden="true" />
